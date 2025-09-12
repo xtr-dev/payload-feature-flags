@@ -49,11 +49,10 @@ export const payloadFeatureFlags =
       enableRollouts = true,
       enableVariants = true,
       enableApi = false,
-      collectionOverrides = {},
+      collectionOverrides,
     } = pluginOptions
-    
-    // Get collection slug from overrides or use default
-    const collectionSlug = collectionOverrides.slug || 'feature-flags'
+
+    const collectionSlug = collectionOverrides?.slug || 'feature-flags'
 
     if (!config.collections) {
       config.collections = []
@@ -86,8 +85,7 @@ export const payloadFeatureFlags =
             description: 'Toggle this feature flag on or off',
           },
         },
-        ...(enableRollouts ? [
-          {
+        ...(enableRollouts ? [{
             name: 'rolloutPercentage',
             type: 'number' as const,
             min: 0,
@@ -97,10 +95,8 @@ export const payloadFeatureFlags =
               description: 'Percentage of users who will see this feature (0-100)',
               condition: (data: any) => data?.enabled === true,
             },
-          },
-        ] : []),
-        ...(enableVariants ? [
-          {
+          }] : []),
+        ...(enableVariants ? [{
             name: 'variants',
             type: 'array' as const,
             admin: {
@@ -134,15 +130,14 @@ export const payloadFeatureFlags =
                 },
               },
             ],
-          },
-        ] : []),
+          }] : []),
         {
           name: 'tags',
-          type: 'array',
+          type: 'array' as const,
           fields: [
             {
               name: 'tag',
-              type: 'text',
+              type: 'text' as const,
             },
           ],
           admin: {
@@ -159,12 +154,12 @@ export const payloadFeatureFlags =
     ]
 
     // Apply field overrides if provided
-    const fields = collectionOverrides.fields 
+    const fields = collectionOverrides?.fields
       ? collectionOverrides.fields({ defaultFields })
       : defaultFields
 
     // Extract field overrides from collectionOverrides
-    const { fields: _fieldsOverride, ...otherOverrides } = collectionOverrides
+    const { fields: _fieldsOverride, ...otherOverrides } = collectionOverrides || {}
 
     // Create the feature flags collection with overrides
     const featureFlagsCollection: CollectionConfig = {
@@ -173,7 +168,7 @@ export const payloadFeatureFlags =
         useAsTitle: 'name',
         group: 'Configuration',
         description: 'Manage feature flags for your application',
-        ...(otherOverrides.admin || {}),
+        ...(collectionOverrides?.admin || {}),
       },
       fields,
       // Apply any other collection overrides
@@ -202,16 +197,16 @@ export const payloadFeatureFlags =
       config.admin.components = {}
     }
 
-    if (!config.admin.components.beforeDashboard) {
-      config.admin.components.beforeDashboard = []
+    if (!config.admin.components.views) {
+      config.admin.components.views = {}
     }
 
-    config.admin.components.beforeDashboard.push(
-      `payload-feature-flags/client#BeforeDashboardClient`,
-    )
-    config.admin.components.beforeDashboard.push(
-      `payload-feature-flags/rsc#BeforeDashboardServer`,
-    )
+    // Add custom feature flags overview view
+    config.admin.components.views['feature-flags-overview'] = {
+      Component: 'payload-feature-flags/views#FeatureFlagsView',
+      path: '/feature-flags-overview',
+    }
+
 
     // Add API endpoints if enabled
     if (enableApi) {

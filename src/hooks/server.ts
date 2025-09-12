@@ -1,4 +1,4 @@
-import { getPayload, type Payload } from 'payload'
+import { Payload } from 'payload'
 
 export interface FeatureFlag {
   name: string
@@ -14,16 +14,20 @@ export interface FeatureFlag {
 
 // Helper to get the collection slug from config
 function getCollectionSlug(payload: Payload): string {
-  // Look for the feature flags collection - it should have a 'name' field with unique constraint
-  const collection = payload.config.collections?.find(col => 
-    col.fields.some((field: any) => 
-      field.name === 'name' && 
-      field.type === 'text' && 
-      field.unique === true
-    ) &&
-    col.fields.some((field: any) => field.name === 'enabled' && field.type === 'checkbox')
-  )
-  return collection?.slug || 'feature-flags'
+  try {
+    // Look for the feature flags collection - it should have a 'name' field with unique constraint
+    const collection = payload.config.collections?.find(col => 
+      col.fields.some((field: any) => 
+        field.name === 'name' && 
+        field.type === 'text' && 
+        field.unique === true
+      ) &&
+      col.fields.some((field: any) => field.name === 'enabled' && field.type === 'checkbox')
+    )
+    return collection?.slug || 'feature-flags'
+  } catch {
+    return 'feature-flags'
+  }
 }
 
 /**
@@ -31,9 +35,12 @@ function getCollectionSlug(payload: Payload): string {
  */
 export async function getFeatureFlag(flagName: string, payload?: Payload): Promise<FeatureFlag | null> {
   try {
+    // If no payload provided, return null as these hooks should be used within Payload context
     if (!payload) {
-      throw new Error('Payload instance is required')
+      console.error('Payload instance not available. These hooks should be called within Payload server context or pass payload as parameter.')
+      return null
     }
+    
     const collectionSlug = getCollectionSlug(payload)
     
     const result = await payload.find({
@@ -78,9 +85,12 @@ export async function isFeatureEnabled(flagName: string, payload?: Payload): Pro
  */
 export async function getAllFeatureFlags(payload?: Payload): Promise<Record<string, FeatureFlag>> {
   try {
+    // If no payload provided, return empty object as these hooks should be used within Payload context
     if (!payload) {
-      throw new Error('Payload instance is required')
+      console.error('Payload instance not available. These hooks should be called within Payload server context or pass payload as parameter.')
+      return {}
     }
+    
     const collectionSlug = getCollectionSlug(payload)
     
     const result = await payload.find({
@@ -175,9 +185,12 @@ export async function getUserVariant(
  */
 export async function getFeatureFlagsByTag(tag: string, payload?: Payload): Promise<FeatureFlag[]> {
   try {
+    // If no payload provided, return empty array as these hooks should be used within Payload context
     if (!payload) {
-      throw new Error('Payload instance is required')
+      console.error('Payload instance not available. These hooks should be called within Payload server context or pass payload as parameter.')
+      return []
     }
+    
     const collectionSlug = getCollectionSlug(payload)
     
     const result = await payload.find({
