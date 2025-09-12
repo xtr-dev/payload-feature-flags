@@ -164,6 +164,27 @@ payloadFeatureFlags({
 })
 ```
 
+### Security Considerations
+
+**API Access Control:** When `enableApi: true`, the REST endpoints respect your collection access controls:
+
+```typescript
+// Example: Secure API access
+access: {
+  // Option 1: Simple authentication check
+  read: ({ req: { user } }) => !!user, // Only authenticated users
+  
+  // Option 2: More granular control
+  read: ({ req: { user } }) => {
+    if (!user) return false                      // No anonymous access
+    if (user.role === 'admin') return true       // Admins see all flags
+    return { environment: { equals: 'public' } } // Others see public flags only
+  }
+}
+```
+
+**Important:** The plugin does not implement separate API authentication - it uses Payload's collection access system for security.
+
 ## Usage
 
 ### Managing Feature Flags
@@ -254,7 +275,11 @@ const allFlags = await fetch('/api/feature-flags')
 const flags = await allFlags.json()
 ```
 
-**Note**: REST API endpoints are disabled by default (`enableApi: false`). Set `enableApi: true` if you need REST endpoints.
+**Important Security Notes:**
+- REST API endpoints are disabled by default (`enableApi: false`)
+- **API endpoints respect your collection access controls** - they don't bypass security
+- Configure access permissions using `collectionOverrides.access` (see example above)
+- Anonymous users can only access flags if you explicitly allow it in access controls
 
 ### API Endpoints
 
