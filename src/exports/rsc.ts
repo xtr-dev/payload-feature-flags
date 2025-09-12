@@ -1,5 +1,3 @@
-export { BeforeDashboardServer } from '../components/BeforeDashboardServer.js'
-
 // Server-side hooks for React Server Components
 export {
   getFeatureFlag,
