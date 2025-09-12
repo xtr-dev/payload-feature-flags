@@ -3,7 +3,7 @@ import type { PayloadHandler } from 'payload'
 export const customEndpointHandler = (collectionSlug: string): PayloadHandler => 
   async (req) => {
     const { payload } = req
-    const url = new URL(req.url)
+    const url = new URL(req.url || '')
     const pathParts = url.pathname.split('/').filter(Boolean)
     const flagName = pathParts[pathParts.length - 1]
     

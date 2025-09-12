@@ -1,0 +1,50 @@
+# Source files
+src/
+dev/
+.next/
+.turbo/
+
+# Development files
+*.log
+.env*
+.DS_Store
+*.tsbuildinfo
+.turbo
+.cache
+.temp
+.tmp
+
+# Test files
+*.test.*
+*.spec.*
+e2e/
+tests/
+__tests__/
+
+# Development dependencies
+node_modules/
+coverage/
+
+# Build configs
+.swcrc
+tsconfig.json
+vitest.config.ts
+playwright.config.ts
+next.config.mjs
+eslint.config.js
+
+# Documentation (keep README.md)
+docs/
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Only include built files
+!dist/
+!package.json
+!README.md
+!LICENSE

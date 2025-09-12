@@ -89,7 +89,7 @@ export const payloadFeatureFlags =
         ...(enableRollouts ? [
           {
             name: 'rolloutPercentage',
-            type: 'number',
+            type: 'number' as const,
             min: 0,
             max: 100,
             defaultValue: 100,
@@ -102,7 +102,7 @@ export const payloadFeatureFlags =
         ...(enableVariants ? [
           {
             name: 'variants',
-            type: 'array',
+            type: 'array' as const,
             admin: {
               description: 'Define variants for A/B testing',
               condition: (data: any) => data?.enabled === true,
@@ -110,7 +110,7 @@ export const payloadFeatureFlags =
             fields: [
               {
                 name: 'name',
-                type: 'text',
+                type: 'text' as const,
                 required: true,
                 admin: {
                   description: 'Variant identifier (e.g., control, variant-a)',
@@ -118,7 +118,7 @@ export const payloadFeatureFlags =
               },
               {
                 name: 'weight',
-                type: 'number',
+                type: 'number' as const,
                 min: 0,
                 max: 100,
                 required: true,
@@ -128,7 +128,7 @@ export const payloadFeatureFlags =
               },
               {
                 name: 'metadata',
-                type: 'json',
+                type: 'json' as const,
                 admin: {
                   description: 'Additional data for this variant',
                 },
