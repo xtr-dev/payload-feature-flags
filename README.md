@@ -1,13 +1,17 @@
 # @xtr-dev/payload-feature-flags
 
-A powerful feature flags plugin for Payload CMS v3 that enables you to manage feature toggles, A/B testing, and gradual rollouts directly from your Payload admin panel.
+Feature flags plugin for Payload CMS v3. Manage feature toggles, A/B tests, and rollouts from your admin panel.
+
+⚠️ **Pre-release Warning**: This package is currently in active development (v0.0.x). Breaking changes may occur before v1.0.0. Not recommended for production use.
 
 ## Features
 
-- 🚀 **Easy Integration** - Drop-in plugin with minimal configuration
-- 🔄 **Gradual Rollouts** - Percentage-based feature deployment
-- 🧪 **A/B Testing** - Built-in variant support
-- 🛣️ **REST API** - Simple flag state endpoints
+- 🚀 **Easy setup** - Add to your Payload config and you're done
+- 🎛️ **Admin dashboard** - Manage flags from your Payload admin panel
+- 🔄 **Gradual rollouts** - Roll out features to a percentage of users
+- 🧪 **A/B testing** - Test different versions of features
+- 🛣️ **REST API** - Check flag status via API endpoints
+- 🗃️ **Quick demo** - Try it instantly with no database setup
 
 ## Installation
 
@@ -15,21 +19,17 @@ A powerful feature flags plugin for Payload CMS v3 that enables you to manage fe
 npm install @xtr-dev/payload-feature-flags
 ```
 
-Or using pnpm:
-
 ```bash
+# or with pnpm
 pnpm add @xtr-dev/payload-feature-flags
-```
 
-Or using yarn:
-
-```bash
+# or with yarn
 yarn add @xtr-dev/payload-feature-flags
 ```
 
 ## Requirements
 
-- Payload CMS v3.37.0 or higher
+- Payload CMS v3.37.0+
 - Node.js 18.20.2+ or 20.9.0+
 - React 19.1.0+
 
@@ -47,12 +47,12 @@ export default buildConfig({
   // ... your existing config
   plugins: [
     payloadFeatureFlags({
-      // All options are optional
-      defaultValue: false,              // Default state for new flags
-      enableRollouts: true,             // Enable percentage-based rollouts
-      enableVariants: true,             // Enable A/B testing variants
-      enableApi: false,                 // Enable REST API endpoints
-      disabled: false,                  // Disable plugin if needed
+      // All options are optional - these are the defaults
+      defaultValue: false,       // New flags start disabled
+      enableRollouts: true,      // Allow percentage rollouts
+      enableVariants: true,      // Allow A/B testing
+      enableApi: false,          // REST API endpoints
+      disabled: false,           // Plugin enabled
     }),
   ],
 })
@@ -60,7 +60,7 @@ export default buildConfig({
 
 ### Configuration Options
 
-The plugin accepts the following configuration options:
+Available plugin options:
 
 ```typescript
 export type PayloadFeatureFlagsConfig = {
@@ -113,9 +113,9 @@ export type PayloadFeatureFlagsConfig = {
 }
 ```
 
-### Collection Overrides
+### Custom Fields and Access
 
-You can customize the feature flags collection using `collectionOverrides`:
+Add custom fields or change permissions using `collectionOverrides`:
 
 ```typescript
 payloadFeatureFlags({
@@ -171,9 +171,29 @@ payloadFeatureFlags({
 Once installed, the plugin automatically:
 
 1. **Creates a dedicated collection** - A `feature-flags` collection (or custom name) for managing all flags
-2. **Provides a clean admin interface** - Manage flags directly from the Payload admin panel
-3. **Exposes REST API endpoints** - Simple endpoints for checking flag states
-4. **Keeps your data clean** - No modifications to your existing collections
+2. **Provides a clean admin interface** - Manage flags directly from the Payload admin panel  
+3. **Adds a custom dashboard view** - Enhanced UI for managing flags at `/admin/feature-flags-overview`
+4. **Exposes REST API endpoints** - Simple endpoints for checking flag states
+5. **Keeps your data clean** - No modifications to your existing collections
+
+### Admin Interface
+
+The plugin provides a custom admin view with enhanced UI for managing feature flags:
+
+**📍 Access:** `/admin/feature-flags-overview`
+
+**Features:**
+- 📊 **Dashboard Overview** - Visual stats showing total, enabled, and rolling out flags
+- 🔍 **Search & Filter** - Find flags by name/description and filter by status
+- 🎛️ **Quick Toggle** - Enable/disable flags with visual toggle switches
+- 🏷️ **Smart Labels** - Visual indicators for rollout percentages, A/B tests, and environments
+- 📱 **Responsive Design** - Works seamlessly on desktop and mobile devices
+
+The custom view provides a more user-friendly interface compared to the standard collection view, with:
+- Real-time status indicators
+- One-click flag toggling
+- Better visual organization
+- Advanced filtering capabilities
 
 ### Using Feature Flags in React Server Components
 
@@ -390,6 +410,24 @@ payloadFeatureFlags({
 
 ## Development
 
+### Try the Demo
+
+Test the plugin with zero setup:
+
+```bash
+git clone https://github.com/xtr-dev/payload-feature-flags
+cd payload-feature-flags
+pnpm install
+pnpm dev
+# Visit http://localhost:3000
+```
+
+**What you get:**
+- 🗃️ **No database needed** - Uses in-memory MongoDB
+- 🎯 **Sample data included** - Ready-to-test feature flag
+- 🔑 **Auto-login** - Use `dev@payloadcms.com / test`
+- 📱 **Working dashboard** - See flags in action
+
 ### Building the Plugin
 
 ```bash
@@ -406,20 +444,10 @@ pnpm test
 pnpm lint
 ```
 
-### Testing
-
-```bash
-# Run integration tests
-pnpm test:int
-
-# Run E2E tests
-pnpm test:e2e
-```
-
 ### Development Mode
 
 ```bash
-# Start development server
+# Start development server with hot reload
 pnpm dev
 
 # Generate types

@@ -27,6 +27,9 @@
       ],
       "payload-feature-flags/rsc": [
         "../src/exports/rsc.ts"
+      ],
+      "payload-feature-flags/views": [
+        "../src/exports/views.ts"
       ]
     },
     "noEmit": true,
