@@ -203,7 +203,7 @@ export const payloadFeatureFlags =
 
     // Add custom feature flags overview view
     config.admin.components.views['feature-flags-overview'] = {
-      Component: 'payload-feature-flags/views#FeatureFlagsView',
+      Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView',
       path: '/feature-flags-overview',
     }
 
