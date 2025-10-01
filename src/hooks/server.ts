@@ -34,14 +34,8 @@ function getCollectionSlug(payload: Payload): string {
 /**
  * Get a specific feature flag by name (for use in React Server Components)
  */
-export const getFeatureFlag = cache(async (flagName: string, payload?: Payload): Promise<FeatureFlag | null> => {
+export const getFeatureFlag = cache(async (flagName: string, payload: Payload): Promise<FeatureFlag | null> => {
   try {
-    // If no payload provided, return null as these hooks should be used within Payload context
-    if (!payload) {
-      console.error('Payload instance not available. These hooks should be called within Payload server context or pass payload as parameter.')
-      return null
-    }
-
     const collectionSlug = getCollectionSlug(payload)
 
     const result = await payload.find({
@@ -76,7 +70,7 @@ export const getFeatureFlag = cache(async (flagName: string, payload?: Payload):
 /**
  * Check if a feature flag is enabled (for use in React Server Components)
  */
-export const isFeatureEnabled = cache(async (flagName: string, payload?: Payload): Promise<boolean> => {
+export const isFeatureEnabled = cache(async (flagName: string, payload: Payload): Promise<boolean> => {
   const flag = await getFeatureFlag(flagName, payload)
   return flag?.enabled ?? false
 })
@@ -84,14 +78,8 @@ export const isFeatureEnabled = cache(async (flagName: string, payload?: Payload
 /**
  * Get all active feature flags (for use in React Server Components)
  */
-export const getAllFeatureFlags = cache(async (payload?: Payload): Promise<Record<string, FeatureFlag>> => {
+export const getAllFeatureFlags = cache(async (payload: Payload): Promise<Record<string, FeatureFlag>> => {
   try {
-    // If no payload provided, return empty object as these hooks should be used within Payload context
-    if (!payload) {
-      console.error('Payload instance not available. These hooks should be called within Payload server context or pass payload as parameter.')
-      return {}
-    }
-
     const collectionSlug = getCollectionSlug(payload)
 
     const result = await payload.find({
@@ -129,7 +117,7 @@ export const getAllFeatureFlags = cache(async (payload?: Payload): Promise<Recor
 export const isUserInRollout = cache(async (
   flagName: string,
   userId: string,
-  payload?: Payload
+  payload: Payload
 ): Promise<boolean> => {
   const flag = await getFeatureFlag(flagName, payload)
 
@@ -155,7 +143,7 @@ export const isUserInRollout = cache(async (
 export const getUserVariant = cache(async (
   flagName: string,
   userId: string,
-  payload?: Payload
+  payload: Payload
 ): Promise<string | null> => {
   const flag = await getFeatureFlag(flagName, payload)
 
@@ -184,14 +172,8 @@ export const getUserVariant = cache(async (
 /**
  * Get feature flags by tags (for use in React Server Components)
  */
-export const getFeatureFlagsByTag = cache(async (tag: string, payload?: Payload): Promise<FeatureFlag[]> => {
+export const getFeatureFlagsByTag = cache(async (tag: string, payload: Payload): Promise<FeatureFlag[]> => {
   try {
-    // If no payload provided, return empty array as these hooks should be used within Payload context
-    if (!payload) {
-      console.error('Payload instance not available. These hooks should be called within Payload server context or pass payload as parameter.')
-      return []
-    }
-
     const collectionSlug = getCollectionSlug(payload)
 
     const result = await payload.find({
