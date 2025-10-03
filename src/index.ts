@@ -172,11 +172,12 @@ export const payloadFeatureFlags =
         components: enableCustomListView ? {
           ...collectionOverrides?.admin?.components,
           views: {
+            ...collectionOverrides?.admin?.components?.views,
             list: {
               Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView'
             }
           }
-        } : (collectionOverrides?.admin?.components || {}),
+        } : collectionOverrides?.admin?.components || {},
         ...(collectionOverrides?.admin || {}),
       },
       fields,
