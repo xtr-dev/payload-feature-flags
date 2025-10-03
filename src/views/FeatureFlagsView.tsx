@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
-import { useConfig, useTheme } from '@payloadcms/ui'
+import {
+  useConfig,
+  useTheme
+} from '@payloadcms/ui'
 
 interface FeatureFlag {
   id: string
@@ -191,28 +194,66 @@ const FeatureFlagsViewComponent = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: styles.background, color: styles.text }}>
-        <div style={{ fontSize: '1.125rem', color: styles.textMuted }}>Loading feature flags...</div>
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: styles.background,
+        color: styles.text
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '2rem',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '1.125rem', color: styles.textMuted }}>Loading feature flags...</div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '100%', backgroundColor: styles.background, color: styles.text, minHeight: '100vh' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{
-          fontSize: '2rem',
-          fontWeight: '700',
-          color: styles.text,
-          marginBottom: '0.5rem'
-        }}>
-          Feature Flags Dashboard
-        </h1>
-        <p style={{ color: styles.textMuted, fontSize: '1rem' }}>
-          Manage all feature flags in a spreadsheet view
-        </p>
-      </div>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: styles.background,
+      color: styles.text
+    }}>
+      <div style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '2rem'
+      }}>
+        {/* Header */}
+        <div style={{ marginBottom: '2rem' }}>
+          {/* Breadcrumb */}
+          <div style={{
+            fontSize: '0.875rem',
+            color: styles.textMuted,
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <a href="/admin" style={{ color: styles.info, textDecoration: 'none' }}>Dashboard</a>
+            <span>›</span>
+            <span>Feature Flags</span>
+          </div>
+
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: '700',
+            color: styles.text,
+            margin: '0 0 0.5rem 0'
+          }}>
+            Feature Flags Dashboard
+          </h1>
+          <p style={{
+            color: styles.textMuted,
+            fontSize: '1rem',
+            margin: '0 0 2rem 0'
+          }}>
+            Manage all feature flags in a spreadsheet view with inline editing capabilities
+          </p>
+        </div>
 
       {/* Success/Error Messages */}
       {successMessage && (
@@ -294,7 +335,8 @@ const FeatureFlagsViewComponent = () => {
         backgroundColor: styles.surface,
         border: `1px solid ${styles.border}`,
         borderRadius: '0.75rem',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        marginBottom: '2rem'
       }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{
@@ -589,6 +631,7 @@ const FeatureFlagsViewComponent = () => {
         <div>
           <span style={{ fontWeight: '600' }}>A/B Tests:</span> {flags.filter(f => f && f.variants && f.variants.length > 0).length}
         </div>
+      </div>
       </div>
     </div>
   )
