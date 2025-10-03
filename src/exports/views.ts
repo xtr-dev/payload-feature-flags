@@ -1,2 +1,2 @@
 // Custom admin views
-export { FeatureFlagsView } from '../views/FeatureFlagsView.js'
+export { default as FeatureFlagsView } from '../views/FeatureFlagsView.js'
