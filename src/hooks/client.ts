@@ -21,23 +21,31 @@ export interface FeatureFlagOptions {
 
 // Helper to get config from options or defaults
 function getConfig(options?: FeatureFlagOptions) {
-  // In server-side environments, serverURL must be explicitly provided
-  const serverURL = options?.serverURL ||
-    (typeof window !== 'undefined' ? window.location.origin : undefined)
-
-  if (!serverURL) {
-    console.warn(
-      'FeatureFlags: serverURL must be provided when using hooks in server-side environment. ' +
-      'Falling back to relative URL which may not work correctly.'
-    )
-    // Use relative URL as fallback - will work if API is on same domain
-    return { serverURL: '', apiPath: options?.apiPath || '/api', collectionSlug: options?.collectionSlug || 'feature-flags' }
+  // Check if serverURL is explicitly provided
+  if (options?.serverURL) {
+    return {
+      serverURL: options.serverURL,
+      apiPath: options.apiPath || '/api',
+      collectionSlug: options.collectionSlug || 'feature-flags'
+    }
   }
 
-  const apiPath = options?.apiPath || '/api'
-  const collectionSlug = options?.collectionSlug || 'feature-flags'
+  // In browser environment, use window.location.origin
+  if (typeof window !== 'undefined') {
+    return {
+      serverURL: window.location.origin,
+      apiPath: options?.apiPath || '/api',
+      collectionSlug: options?.collectionSlug || 'feature-flags'
+    }
+  }
 
-  return { serverURL, apiPath, collectionSlug }
+  // During SSR or in non-browser environments, use relative URL
+  // This will work for same-origin requests
+  return {
+    serverURL: '',
+    apiPath: options?.apiPath || '/api',
+    collectionSlug: options?.collectionSlug || 'feature-flags'
+  }
 }
 
 /**
