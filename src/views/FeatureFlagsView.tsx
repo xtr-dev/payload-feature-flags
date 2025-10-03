@@ -19,6 +19,9 @@ async function fetchInitialFlags(payload: any, collectionSlug: string): Promise<
 }
 
 export default async function FeatureFlagsView(props: ListViewServerProps) {
+  // Debug: log what props we actually receive
+  console.log('FeatureFlagsView props keys:', Object.keys(props))
+
   const { collectionConfig, user, permissions, payload } = props
 
   // Security check: User must be logged in
