@@ -2,32 +2,16 @@ import type { AdminViewServerProps } from 'payload'
 import { DefaultTemplate } from '@payloadcms/next/templates'
 import { Gutter } from '@payloadcms/ui'
 import FeatureFlagsClient from './FeatureFlagsClient.js'
-
-interface FeatureFlag {
-  id: string
-  name: string
-  description?: string
-  enabled: boolean
-  rolloutPercentage?: number
-  variants?: Array<{
-    name: string
-    weight: number
-    metadata?: any
-  }>
-  environment?: 'development' | 'staging' | 'production'
-  tags?: Array<{ tag: string }>
-  metadata?: any
-  createdAt: string
-  updatedAt: string
-}
+import type { FeatureFlag } from '../types/index.js'
 
 async function fetchInitialFlags(payload: any, searchParams?: Record<string, any>): Promise<FeatureFlag[]> {
   try {
     const limit = Math.min(1000, parseInt(searchParams?.limit as string) || 100)
     const page = Math.max(1, parseInt(searchParams?.page as string) || 1)
+    const collectionSlug = searchParams?.collectionSlug as string || 'feature-flags'
 
     const result = await payload.find({
-      collection: 'feature-flags',
+      collection: collectionSlug,
       limit,
       page,
       sort: 'name',
@@ -100,7 +84,8 @@ export default async function FeatureFlagsView({
   }
 
   // Security check: User must have permissions to access feature-flags collection
-  const canReadFeatureFlags = permissions?.collections?.['feature-flags']?.read
+  const collectionSlug = searchParams?.collectionSlug as string || 'feature-flags'
+  const canReadFeatureFlags = permissions?.collections?.[collectionSlug]?.read
   if (!canReadFeatureFlags) {
     return (
       <DefaultTemplate
@@ -141,8 +126,8 @@ export default async function FeatureFlagsView({
   // Fetch initial data server-side (only if user has access)
   const initialFlags = await fetchInitialFlags(initPageResult.req.payload, searchParams)
 
-  // Check if user can update feature flags
-  const canUpdateFeatureFlags = permissions?.collections?.['feature-flags']?.update || false
+  // Check if user can update feature flags (use already defined collection slug)
+  const canUpdateFeatureFlags = permissions?.collections?.[collectionSlug]?.update || false
 
   // Use DefaultTemplate with proper props structure from initPageResult
   return (
@@ -160,6 +145,8 @@ export default async function FeatureFlagsView({
         <FeatureFlagsClient
           initialFlags={initialFlags}
           canUpdate={canUpdateFeatureFlags}
+          maxFlags={parseInt(searchParams?.maxFlags as string) || 100}
+          collectionSlug={collectionSlug}
         />
       </Gutter>
     </DefaultTemplate>

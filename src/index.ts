@@ -6,6 +6,9 @@ export type CollectionOverrides = Partial<
   fields?: (args: { defaultFields: Field[] }) => Field[]
 }
 
+// Export shared types for users of the plugin
+export type { PayloadID, FeatureFlag } from './types/index.js'
+
 export type PayloadFeatureFlagsConfig = {
   /**
    * Enable/disable the plugin

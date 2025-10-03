@@ -4,6 +4,7 @@ import {
   useConfig,
   useTheme
 } from '@payloadcms/ui'
+import type { PayloadID, FeatureFlag } from '../types/index.js'
 
 // Simple debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -22,30 +23,19 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue
 }
 
-interface FeatureFlag {
-  id: string
-  name: string
-  description?: string
-  enabled: boolean
-  rolloutPercentage?: number
-  variants?: Array<{
-    name: string
-    weight: number
-    metadata?: any
-  }>
-  environment?: 'development' | 'staging' | 'production'
-  tags?: Array<{ tag: string }>
-  metadata?: any
-  createdAt: string
-  updatedAt: string
-}
-
 interface FeatureFlagsClientProps {
   initialFlags?: FeatureFlag[]
   canUpdate?: boolean
+  maxFlags?: number // Configurable limit for API requests
+  collectionSlug?: string // Configurable collection slug for URLs
 }
 
-const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: FeatureFlagsClientProps) => {
+const FeatureFlagsClientComponent = ({
+  initialFlags = [],
+  canUpdate = true,
+  maxFlags = 100,
+  collectionSlug = 'feature-flags'
+}: FeatureFlagsClientProps) => {
   const { config } = useConfig()
   const { theme } = useTheme()
   const [flags, setFlags] = useState<FeatureFlag[]>(initialFlags)
@@ -54,7 +44,7 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
   const [search, setSearch] = useState('')
   const [sortField, setSortField] = useState<'name' | 'enabled' | 'rolloutPercentage' | 'updatedAt'>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-  const [saving, setSaving] = useState<string | null>(null)
+  const [saving, setSaving] = useState<PayloadID | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
 
   // Debounce search to reduce re-renders
@@ -65,9 +55,9 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
       setLoading(true)
       setError('')
 
-      // Use a reasonable limit to prevent performance issues
-      const limit = Math.min(1000, 100)
-      const response = await fetch(`${config.serverURL}${config.routes.api}/feature-flags?limit=${limit}`, {
+      // Use configurable limit, capped at 1000 for performance
+      const limit = Math.min(1000, maxFlags)
+      const response = await fetch(`${config.serverURL}${config.routes.api}/${collectionSlug}?limit=${limit}`, {
         credentials: 'include',
         signal,
       })
@@ -101,7 +91,7 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
     }
   }
 
-  const updateFlag = useCallback(async (flagId: string, updates: Partial<FeatureFlag>) => {
+  const updateFlag = useCallback(async (flagId: PayloadID, updates: Partial<FeatureFlag>) => {
     // Security check: Don't allow updates if user doesn't have permission
     if (!canUpdate) {
       setError('You do not have permission to update feature flags')
@@ -114,7 +104,7 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
     setSuccessMessage('')
 
     try {
-      const response = await fetch(`${config.serverURL}${config.routes.api}/feature-flags/${flagId}`, {
+      const response = await fetch(`${config.serverURL}${config.routes.api}/${collectionSlug}/${flagId}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: {
@@ -149,7 +139,7 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
     } finally {
       setSaving(null)
     }
-  }, [config.serverURL, config.routes.api, canUpdate])
+  }, [config.serverURL, config.routes.api, canUpdate, collectionSlug])
 
   const handleSort = useCallback((field: typeof sortField) => {
     if (sortField === field) {
@@ -512,7 +502,7 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
                       color: styles.text
                     }}>
                       <a
-                        href={`${config.routes.admin}/collections/feature-flags/${flag.id}`}
+                        href={`${config.routes.admin}/collections/${collectionSlug}/${flag.id}`}
                         style={{
                           color: styles.info,
                           textDecoration: 'none',
