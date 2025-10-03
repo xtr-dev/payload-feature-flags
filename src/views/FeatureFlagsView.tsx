@@ -23,7 +23,12 @@ interface FeatureFlag {
   updatedAt: string
 }
 
-const FeatureFlagsViewComponent = () => {
+interface FeatureFlagsViewProps {
+  // Props that would typically be passed from the parent view
+  [key: string]: any
+}
+
+const FeatureFlagsViewComponent = (props: FeatureFlagsViewProps = {}) => {
   const { config } = useConfig()
   const { theme } = useTheme()
   const [flags, setFlags] = useState<FeatureFlag[]>([])
@@ -195,49 +200,31 @@ const FeatureFlagsViewComponent = () => {
   if (loading) {
     return (
       <div style={{
-        minHeight: '100vh',
-        backgroundColor: styles.background,
-        color: styles.text
+        padding: '2rem',
+        textAlign: 'center',
+        minHeight: '400px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '2rem',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '1.125rem', color: styles.textMuted }}>Loading feature flags...</div>
-        </div>
+        <div style={{ fontSize: '1.125rem', color: styles.textMuted }}>Loading feature flags...</div>
       </div>
     )
   }
 
   return (
     <div style={{
-      minHeight: '100vh',
-      backgroundColor: styles.background,
-      color: styles.text
+      padding: '0',
+      height: '100%',
+      overflow: 'auto'
     }}>
+      {/* Content Container */}
       <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '2rem'
+        padding: '2rem',
+        maxWidth: '100%'
       }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
-          {/* Breadcrumb */}
-          <div style={{
-            fontSize: '0.875rem',
-            color: styles.textMuted,
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <a href="/admin" style={{ color: styles.info, textDecoration: 'none' }}>Dashboard</a>
-            <span>›</span>
-            <span>Feature Flags</span>
-          </div>
-
           <h1 style={{
             fontSize: '2rem',
             fontWeight: '700',
@@ -638,3 +625,4 @@ const FeatureFlagsViewComponent = () => {
 }
 
 export const FeatureFlagsView = memo(FeatureFlagsViewComponent)
+export default FeatureFlagsView
