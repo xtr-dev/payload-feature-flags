@@ -50,7 +50,7 @@ const FeatureFlagsClientComponent = ({
   // Debounce search to reduce re-renders
   const debouncedSearch = useDebounce(search, 300)
 
-  const fetchFlags = async (signal?: AbortSignal) => {
+  const fetchFlags = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       setError('')
@@ -89,7 +89,21 @@ const FeatureFlagsClientComponent = ({
         setLoading(false)
       }
     }
-  }
+  }, [config.serverURL, config.routes.api, collectionSlug, maxFlags])
+
+  useEffect(() => {
+    const abortController = new AbortController()
+
+    const loadFlags = async () => {
+      await fetchFlags(abortController.signal)
+    }
+
+    loadFlags()
+
+    return () => {
+      abortController.abort()
+    }
+  }, [fetchFlags]) // Re-fetch if fetchFlags function changes
 
   const updateFlag = useCallback(async (flagId: PayloadID, updates: Partial<FeatureFlag>) => {
     // Security check: Don't allow updates if user doesn't have permission
