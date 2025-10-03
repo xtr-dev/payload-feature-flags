@@ -61,8 +61,8 @@ const FeatureFlagsViewComponent = () => {
 
       const result = await response.json()
 
-      // Extract docs array from Payload API response
-      const flagsArray = result.docs || []
+      // Extract docs array from Payload API response and filter out null/invalid entries
+      const flagsArray = (result.docs || []).filter((flag: any) => flag && flag.id && flag.name)
 
       // Only update state if the component is still mounted (signal not aborted)
       if (!signal?.aborted) {
@@ -131,14 +131,15 @@ const FeatureFlagsViewComponent = () => {
   }, [sortField])
 
   const filteredAndSortedFlags = useMemo(() => {
-    let filtered = flags
+    // Filter out null/undefined entries first
+    let filtered = flags.filter(flag => flag && flag.name)
 
     // Filter by search
     if (search) {
-      filtered = flags.filter(flag =>
-        flag.name.toLowerCase().includes(search.toLowerCase()) ||
+      filtered = filtered.filter(flag =>
+        flag.name?.toLowerCase().includes(search.toLowerCase()) ||
         flag.description?.toLowerCase().includes(search.toLowerCase()) ||
-        flag.tags?.some(t => t.tag.toLowerCase().includes(search.toLowerCase()))
+        flag.tags?.some(t => t.tag?.toLowerCase().includes(search.toLowerCase()))
       )
     }
 
@@ -148,8 +149,8 @@ const FeatureFlagsViewComponent = () => {
       let bVal: any = b[sortField]
 
       if (sortField === 'updatedAt') {
-        aVal = new Date(aVal).getTime()
-        bVal = new Date(bVal).getTime()
+        aVal = new Date(aVal || 0).getTime()
+        bVal = new Date(bVal || 0).getTime()
       }
 
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
@@ -246,7 +247,7 @@ const FeatureFlagsViewComponent = () => {
 
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-            {filteredAndSortedFlags.length} of {flags.length} flags
+            {filteredAndSortedFlags.length} of {flags.filter(f => f && f.name).length} flags
           </div>
           <button
             onClick={() => fetchFlags()}
@@ -538,19 +539,19 @@ const FeatureFlagsViewComponent = () => {
         color: '#6b7280'
       }}>
         <div>
-          <span style={{ fontWeight: '600' }}>Total:</span> {flags.length} flags
+          <span style={{ fontWeight: '600' }}>Total:</span> {flags.filter(f => f && f.name).length} flags
         </div>
         <div>
-          <span style={{ fontWeight: '600' }}>Enabled:</span> {flags.filter(f => f.enabled).length}
+          <span style={{ fontWeight: '600' }}>Enabled:</span> {flags.filter(f => f && f.enabled).length}
         </div>
         <div>
-          <span style={{ fontWeight: '600' }}>Disabled:</span> {flags.filter(f => !f.enabled).length}
+          <span style={{ fontWeight: '600' }}>Disabled:</span> {flags.filter(f => f && !f.enabled).length}
         </div>
         <div>
-          <span style={{ fontWeight: '600' }}>Rolling out:</span> {flags.filter(f => f.enabled && f.rolloutPercentage && f.rolloutPercentage < 100).length}
+          <span style={{ fontWeight: '600' }}>Rolling out:</span> {flags.filter(f => f && f.enabled && f.rolloutPercentage && f.rolloutPercentage < 100).length}
         </div>
         <div>
-          <span style={{ fontWeight: '600' }}>A/B Tests:</span> {flags.filter(f => f.variants && f.variants.length > 0).length}
+          <span style={{ fontWeight: '600' }}>A/B Tests:</span> {flags.filter(f => f && f.variants && f.variants.length > 0).length}
         </div>
       </div>
     </div>
