@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
-import { useConfig } from '@payloadcms/ui'
+import { useConfig, useTheme } from '@payloadcms/ui'
 
 interface FeatureFlag {
   id: string
@@ -22,6 +22,7 @@ interface FeatureFlag {
 
 const FeatureFlagsViewComponent = () => {
   const { config } = useConfig()
+  const { theme } = useTheme()
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -168,27 +169,47 @@ const FeatureFlagsViewComponent = () => {
     return <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
   }
 
+  // Theme-aware styles
+  const getThemeStyles = () => ({
+    background: 'var(--theme-bg)',
+    surface: 'var(--theme-elevation-50)',
+    surfaceHover: 'var(--theme-elevation-100)',
+    border: 'var(--theme-elevation-150)',
+    text: 'var(--theme-text)',
+    textMuted: 'var(--theme-text-400)',
+    textSubdued: 'var(--theme-text-600)',
+    primary: 'var(--theme-success-500)',
+    warning: 'var(--theme-warning-500)',
+    error: 'var(--theme-error-500)',
+    info: 'var(--theme-info-500)',
+    inputBg: 'var(--theme-elevation-0)',
+    inputBorder: 'var(--theme-elevation-250)',
+    headerBg: 'var(--theme-elevation-100)',
+  })
+
+  const styles = getThemeStyles()
+
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.125rem', color: '#6b7280' }}>Loading feature flags...</div>
+      <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: styles.background, color: styles.text }}>
+        <div style={{ fontSize: '1.125rem', color: styles.textMuted }}>Loading feature flags...</div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '100%' }}>
+    <div style={{ padding: '2rem', maxWidth: '100%', backgroundColor: styles.background, color: styles.text, minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{
           fontSize: '2rem',
           fontWeight: '700',
-          color: '#111827',
+          color: styles.text,
           marginBottom: '0.5rem'
         }}>
           Feature Flags Dashboard
         </h1>
-        <p style={{ color: '#6b7280', fontSize: '1rem' }}>
+        <p style={{ color: styles.textMuted, fontSize: '1rem' }}>
           Manage all feature flags in a spreadsheet view
         </p>
       </div>
@@ -199,7 +220,7 @@ const FeatureFlagsViewComponent = () => {
           position: 'fixed',
           top: '20px',
           right: '20px',
-          backgroundColor: '#10b981',
+          backgroundColor: styles.primary,
           color: 'white',
           padding: '0.75rem 1.5rem',
           borderRadius: '0.5rem',
@@ -213,11 +234,11 @@ const FeatureFlagsViewComponent = () => {
       {error && (
         <div style={{
           marginBottom: '1rem',
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
+          backgroundColor: styles.error + '20',
+          border: `1px solid ${styles.error}`,
           borderRadius: '0.5rem',
           padding: '1rem',
-          color: '#dc2626'
+          color: styles.error
         }}>
           <strong>Error:</strong> {error}
         </div>
@@ -238,25 +259,27 @@ const FeatureFlagsViewComponent = () => {
           onChange={(e) => setSearch(e.target.value)}
           style={{
             padding: '0.5rem 1rem',
-            border: '1px solid #d1d5db',
+            border: `1px solid ${styles.inputBorder}`,
             borderRadius: '0.5rem',
             fontSize: '0.875rem',
-            width: '300px'
+            width: '300px',
+            backgroundColor: styles.inputBg,
+            color: styles.text
           }}
         />
 
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+          <div style={{ fontSize: '0.875rem', color: styles.textMuted }}>
             {filteredAndSortedFlags.length} of {flags.filter(f => f && f.name).length} flags
           </div>
           <button
             onClick={() => fetchFlags()}
             style={{
               padding: '0.5rem 1rem',
-              border: '1px solid #d1d5db',
+              border: `1px solid ${styles.inputBorder}`,
               borderRadius: '0.5rem',
-              backgroundColor: 'white',
-              color: '#374151',
+              backgroundColor: styles.surface,
+              color: styles.text,
               fontSize: '0.875rem',
               cursor: 'pointer'
             }}
@@ -268,8 +291,8 @@ const FeatureFlagsViewComponent = () => {
 
       {/* Spreadsheet Table */}
       <div style={{
-        backgroundColor: 'white',
-        border: '1px solid #e5e7eb',
+        backgroundColor: styles.surface,
+        border: `1px solid ${styles.border}`,
         borderRadius: '0.75rem',
         overflow: 'hidden'
       }}>
@@ -280,16 +303,16 @@ const FeatureFlagsViewComponent = () => {
             fontSize: '0.875rem'
           }}>
             <thead>
-              <tr style={{ backgroundColor: '#f9fafb' }}>
+              <tr style={{ backgroundColor: styles.headerBg }}>
                 <th style={{
                   padding: '0.75rem 1rem',
                   textAlign: 'left',
                   fontWeight: '600',
-                  color: '#374151',
-                  borderBottom: '1px solid #e5e7eb',
+                  color: styles.text,
+                  borderBottom: `1px solid ${styles.border}`,
                   position: 'sticky',
                   left: 0,
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: styles.headerBg,
                   minWidth: '50px'
                 }}>
                   Status
@@ -300,8 +323,8 @@ const FeatureFlagsViewComponent = () => {
                     padding: '0.75rem 1rem',
                     textAlign: 'left',
                     fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
+                    color: styles.text,
+                    borderBottom: `1px solid ${styles.border}`,
                     cursor: 'pointer',
                     minWidth: '200px',
                     userSelect: 'none'
@@ -313,8 +336,8 @@ const FeatureFlagsViewComponent = () => {
                   padding: '0.75rem 1rem',
                   textAlign: 'left',
                   fontWeight: '600',
-                  color: '#374151',
-                  borderBottom: '1px solid #e5e7eb',
+                  color: styles.text,
+                  borderBottom: `1px solid ${styles.border}`,
                   minWidth: '300px'
                 }}>
                   Description
@@ -325,8 +348,8 @@ const FeatureFlagsViewComponent = () => {
                     padding: '0.75rem 1rem',
                     textAlign: 'center',
                     fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
+                    color: styles.text,
+                    borderBottom: `1px solid ${styles.border}`,
                     cursor: 'pointer',
                     minWidth: '80px',
                     userSelect: 'none'
@@ -340,8 +363,8 @@ const FeatureFlagsViewComponent = () => {
                     padding: '0.75rem 1rem',
                     textAlign: 'center',
                     fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
+                    color: styles.text,
+                    borderBottom: `1px solid ${styles.border}`,
                     cursor: 'pointer',
                     minWidth: '120px',
                     userSelect: 'none'
@@ -353,8 +376,8 @@ const FeatureFlagsViewComponent = () => {
                   padding: '0.75rem 1rem',
                   textAlign: 'center',
                   fontWeight: '600',
-                  color: '#374151',
-                  borderBottom: '1px solid #e5e7eb',
+                  color: styles.text,
+                  borderBottom: `1px solid ${styles.border}`,
                   minWidth: '100px'
                 }}>
                   Variants
@@ -363,8 +386,8 @@ const FeatureFlagsViewComponent = () => {
                   padding: '0.75rem 1rem',
                   textAlign: 'left',
                   fontWeight: '600',
-                  color: '#374151',
-                  borderBottom: '1px solid #e5e7eb',
+                  color: styles.text,
+                  borderBottom: `1px solid ${styles.border}`,
                   minWidth: '150px'
                 }}>
                   Tags
@@ -375,8 +398,8 @@ const FeatureFlagsViewComponent = () => {
                     padding: '0.75rem 1rem',
                     textAlign: 'left',
                     fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
+                    color: styles.text,
+                    borderBottom: `1px solid ${styles.border}`,
                     cursor: 'pointer',
                     minWidth: '150px',
                     userSelect: 'none'
@@ -392,7 +415,7 @@ const FeatureFlagsViewComponent = () => {
                   <td colSpan={8} style={{
                     padding: '2rem',
                     textAlign: 'center',
-                    color: '#6b7280'
+                    color: styles.textMuted
                   }}>
                     {search ? 'No flags match your search' : 'No feature flags yet'}
                   </td>
@@ -400,10 +423,10 @@ const FeatureFlagsViewComponent = () => {
               ) : (
                 filteredAndSortedFlags.map(flag => (
                   <tr key={flag.id} style={{
-                    borderBottom: '1px solid #e5e7eb',
+                    borderBottom: `1px solid ${styles.border}`,
                     transition: 'background-color 0.15s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = styles.surfaceHover}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
                   >
                     <td style={{
@@ -417,20 +440,31 @@ const FeatureFlagsViewComponent = () => {
                         height: '8px',
                         borderRadius: '50%',
                         backgroundColor: flag.enabled ?
-                          (flag.rolloutPercentage && flag.rolloutPercentage < 100 ? '#f59e0b' : '#10b981')
-                          : '#ef4444'
+                          (flag.rolloutPercentage && flag.rolloutPercentage < 100 ? styles.warning : styles.primary)
+                          : styles.error
                       }} />
                     </td>
                     <td style={{
                       padding: '0.75rem 1rem',
                       fontWeight: '500',
-                      color: '#111827'
+                      color: styles.text
                     }}>
-                      {flag.name}
+                      <a
+                        href={`/admin/collections/feature-flags/${flag.id}`}
+                        style={{
+                          color: styles.info,
+                          textDecoration: 'none',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                        onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                      >
+                        {flag.name}
+                      </a>
                     </td>
                     <td style={{
                       padding: '0.75rem 1rem',
-                      color: '#6b7280'
+                      color: styles.textMuted
                     }}>
                       {flag.description || '-'}
                     </td>
@@ -447,7 +481,7 @@ const FeatureFlagsViewComponent = () => {
                           width: '18px',
                           height: '18px',
                           cursor: saving === flag.id ? 'wait' : 'pointer',
-                          accentColor: '#10b981'
+                          accentColor: styles.primary
                         }}
                       />
                     </td>
@@ -469,25 +503,27 @@ const FeatureFlagsViewComponent = () => {
                           style={{
                             width: '60px',
                             padding: '0.25rem 0.5rem',
-                            border: '1px solid #d1d5db',
+                            border: `1px solid ${styles.inputBorder}`,
                             borderRadius: '0.25rem',
                             fontSize: '0.875rem',
                             textAlign: 'center',
                             cursor: saving === flag.id ? 'wait' : 'text',
-                            opacity: flag.enabled ? 1 : 0.5
+                            opacity: flag.enabled ? 1 : 0.5,
+                            backgroundColor: styles.inputBg,
+                            color: styles.text
                           }}
                         />
-                        <span style={{ color: '#6b7280' }}>%</span>
+                        <span style={{ color: styles.textMuted }}>%</span>
                       </div>
                     </td>
                     <td style={{
                       padding: '0.75rem 1rem',
                       textAlign: 'center',
-                      color: '#6b7280'
+                      color: styles.textMuted
                     }}>
                       {flag.variants && flag.variants.length > 0 ? (
                         <span style={{
-                          backgroundColor: '#f3f4f6',
+                          backgroundColor: styles.surface,
                           padding: '0.25rem 0.5rem',
                           borderRadius: '0.25rem',
                           fontSize: '0.75rem'
@@ -503,8 +539,8 @@ const FeatureFlagsViewComponent = () => {
                         <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                           {flag.tags.map((t, i) => (
                             <span key={i} style={{
-                              backgroundColor: '#e0e7ff',
-                              color: '#3730a3',
+                              backgroundColor: styles.info + '20',
+                              color: styles.info,
                               padding: '0.125rem 0.5rem',
                               borderRadius: '0.25rem',
                               fontSize: '0.75rem'
@@ -517,7 +553,7 @@ const FeatureFlagsViewComponent = () => {
                     </td>
                     <td style={{
                       padding: '0.75rem 1rem',
-                      color: '#6b7280',
+                      color: styles.textMuted,
                       fontSize: '0.75rem'
                     }}>
                       {new Date(flag.updatedAt).toLocaleDateString()} {new Date(flag.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -536,7 +572,7 @@ const FeatureFlagsViewComponent = () => {
         display: 'flex',
         gap: '2rem',
         fontSize: '0.875rem',
-        color: '#6b7280'
+        color: styles.textMuted
       }}>
         <div>
           <span style={{ fontWeight: '600' }}>Total:</span> {flags.filter(f => f && f.name).length} flags
