@@ -4,6 +4,7 @@ import {
   useConfig,
   useTheme
 } from '@payloadcms/ui'
+import { DefaultTemplate } from '@payloadcms/next/templates'
 
 interface FeatureFlag {
   id: string
@@ -24,11 +25,17 @@ interface FeatureFlag {
 }
 
 interface FeatureFlagsViewProps {
-  // Props that would typically be passed from the parent view
-  [key: string]: any
+  i18n?: any
+  locale?: any
+  params?: any
+  payload?: any
+  permissions?: any
+  searchParams?: any
+  user?: any
+  visibleEntities?: any
 }
 
-const FeatureFlagsViewComponent = (props: FeatureFlagsViewProps = {}) => {
+const FeatureFlagsViewComponent = (props: FeatureFlagsViewProps) => {
   const { config } = useConfig()
   const { theme } = useTheme()
   const [flags, setFlags] = useState<FeatureFlag[]>([])
@@ -197,80 +204,72 @@ const FeatureFlagsViewComponent = (props: FeatureFlagsViewProps = {}) => {
 
   const styles = getThemeStyles()
 
-  if (loading) {
-    return (
-      <div style={{
-        padding: '2rem',
-        textAlign: 'center',
-        minHeight: '400px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{ fontSize: '1.125rem', color: styles.textMuted }}>Loading feature flags...</div>
-      </div>
-    )
-  }
-
-  return (
+  const FeatureFlagsContent = () => (
     <div style={{
-      padding: '0',
-      height: '100%',
-      overflow: 'auto'
+      padding: '2rem',
+      maxWidth: '100%'
     }}>
-      {/* Content Container */}
-      <div style={{
-        padding: '2rem',
-        maxWidth: '100%'
-      }}>
-        {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{
-            fontSize: '2rem',
-            fontWeight: '700',
-            color: styles.text,
-            margin: '0 0 0.5rem 0'
-          }}>
-            Feature Flags Dashboard
-          </h1>
-          <p style={{
-            color: styles.textMuted,
-            fontSize: '1rem',
-            margin: '0 0 2rem 0'
-          }}>
-            Manage all feature flags in a spreadsheet view with inline editing capabilities
-          </p>
-        </div>
-
-      {/* Success/Error Messages */}
-      {successMessage && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          backgroundColor: styles.primary,
-          color: 'white',
-          padding: '0.75rem 1.5rem',
-          borderRadius: '0.5rem',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          zIndex: 1000,
+      {/* Header */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{
+          fontSize: '2rem',
+          fontWeight: '700',
+          color: styles.text,
+          margin: '0 0 0.5rem 0'
         }}>
-          {successMessage}
-        </div>
-      )}
-
-      {error && (
-        <div style={{
-          marginBottom: '1rem',
-          backgroundColor: styles.error + '20',
-          border: `1px solid ${styles.error}`,
-          borderRadius: '0.5rem',
-          padding: '1rem',
-          color: styles.error
+          Feature Flags Dashboard
+        </h1>
+        <p style={{
+          color: styles.textMuted,
+          fontSize: '1rem',
+          margin: '0 0 2rem 0'
         }}>
-          <strong>Error:</strong> {error}
+          Manage all feature flags in a spreadsheet view with inline editing capabilities
+        </p>
+      </div>
+
+      {loading ? (
+        <div style={{
+          padding: '2rem',
+          textAlign: 'center',
+          minHeight: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{ fontSize: '1.125rem', color: styles.textMuted }}>Loading feature flags...</div>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Success/Error Messages */}
+          {successMessage && (
+            <div style={{
+              position: 'fixed',
+              top: '20px',
+              right: '20px',
+              backgroundColor: styles.primary,
+              color: 'white',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.5rem',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+              zIndex: 1000,
+            }}>
+              {successMessage}
+            </div>
+          )}
+
+          {error && (
+            <div style={{
+              marginBottom: '1rem',
+              backgroundColor: styles.error + '20',
+              border: `1px solid ${styles.error}`,
+              borderRadius: '0.5rem',
+              padding: '1rem',
+              color: styles.error
+            }}>
+              <strong>Error:</strong> {error}
+            </div>
+          )}
 
       {/* Controls */}
       <div style={{
@@ -619,8 +618,24 @@ const FeatureFlagsViewComponent = (props: FeatureFlagsViewProps = {}) => {
           <span style={{ fontWeight: '600' }}>A/B Tests:</span> {flags.filter(f => f && f.variants && f.variants.length > 0).length}
         </div>
       </div>
-      </div>
+        </>
+      )}
     </div>
+  )
+
+  return (
+    <DefaultTemplate
+      i18n={props.i18n}
+      locale={props.locale}
+      params={props.params}
+      payload={props.payload}
+      permissions={props.permissions}
+      searchParams={props.searchParams}
+      user={props.user}
+      visibleEntities={props.visibleEntities}
+    >
+      <FeatureFlagsContent />
+    </DefaultTemplate>
   )
 }
 
