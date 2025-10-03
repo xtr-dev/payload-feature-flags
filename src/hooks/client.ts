@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
 
 export interface FeatureFlag {
   name: string
@@ -21,9 +21,19 @@ export interface FeatureFlagOptions {
 
 // Helper to get config from options or defaults
 function getConfig(options?: FeatureFlagOptions) {
+  // In server-side environments, serverURL must be explicitly provided
   const serverURL = options?.serverURL ||
-    (typeof window !== 'undefined' ? window.location.origin : '') ||
-    ''
+    (typeof window !== 'undefined' ? window.location.origin : undefined)
+
+  if (!serverURL) {
+    console.warn(
+      'FeatureFlags: serverURL must be provided when using hooks in server-side environment. ' +
+      'Falling back to relative URL which may not work correctly.'
+    )
+    // Use relative URL as fallback - will work if API is on same domain
+    return { serverURL: '', apiPath: options?.apiPath || '/api', collectionSlug: options?.collectionSlug || 'feature-flags' }
+  }
+
   const apiPath = options?.apiPath || '/api'
   const collectionSlug = options?.collectionSlug || 'feature-flags'
 
@@ -47,13 +57,21 @@ export function useFeatureFlags(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Use ref to store initialFlags to avoid re-creating fetchFlags on every render
+  const initialFlagsRef = useRef(initialFlags)
+
+  // Update ref when initialFlags changes (but won't trigger re-fetch)
+  useEffect(() => {
+    initialFlagsRef.current = initialFlags
+  }, [initialFlags])
+
   const fetchFlags = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
       // Use Payload's native collection API
-      const names = initialFlags.map(f => f.name).filter(Boolean)
+      const names = initialFlagsRef.current.map(f => f.name).filter(Boolean)
       const query = names.length > 0
         ? `?where[name][in]=${names.join(',')}&limit=1000`
         : '?limit=1000'
@@ -81,7 +99,7 @@ export function useFeatureFlags(
       }
 
       // Sort flags based on the order of names in initialFlags
-      const sortedFlags = initialFlags.map(initialFlag => {
+      const sortedFlags = initialFlagsRef.current.map(initialFlag => {
         const fetchedFlag = fetchedFlagsMap.get(initialFlag.name!)
         // Use fetched flag if available, otherwise keep the initial flag
         return fetchedFlag || initialFlag
@@ -94,7 +112,7 @@ export function useFeatureFlags(
     } finally {
       setLoading(false)
     }
-  }, [serverURL, apiPath, collectionSlug, initialFlags])
+  }, [serverURL, apiPath, collectionSlug]) // Remove initialFlags from dependencies
 
   useEffect(() => {
     void fetchFlags()
