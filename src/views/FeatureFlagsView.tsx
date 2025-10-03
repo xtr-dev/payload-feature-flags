@@ -4,6 +4,8 @@ import {
   useConfig,
   useTheme
 } from '@payloadcms/ui'
+import { DefaultTemplate } from '@payloadcms/next/templates'
+import type { Locale } from 'payload'
 
 interface FeatureFlag {
   id: string
@@ -24,6 +26,14 @@ interface FeatureFlag {
 }
 
 interface FeatureFlagsViewProps {
+  i18n?: any
+  locale?: Locale
+  params?: Record<string, any>
+  payload?: any
+  permissions?: any
+  searchParams?: Record<string, any>
+  user?: any
+  visibleEntities?: any
   [key: string]: any
 }
 
@@ -615,8 +625,21 @@ const FeatureFlagsViewComponent = (props: FeatureFlagsViewProps = {}) => {
     </div>
   )
 
-  // Return the content directly - Payload handles the admin layout for custom views
-  return <FeatureFlagsContent />
+  // Use DefaultTemplate with proper props structure
+  return (
+    <DefaultTemplate
+      i18n={props.i18n}
+      locale={props.locale}
+      params={props.params}
+      payload={props.payload}
+      permissions={props.permissions}
+      searchParams={props.searchParams}
+      user={props.user}
+      visibleEntities={props.visibleEntities}
+    >
+      <FeatureFlagsContent />
+    </DefaultTemplate>
+  )
 }
 
 export const FeatureFlagsView = memo(FeatureFlagsViewComponent)
