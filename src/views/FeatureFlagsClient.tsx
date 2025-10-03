@@ -5,6 +5,23 @@ import {
   useTheme
 } from '@payloadcms/ui'
 
+// Simple debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+
 interface FeatureFlag {
   id: string
   name: string
@@ -40,12 +57,17 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
   const [saving, setSaving] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
 
+  // Debounce search to reduce re-renders
+  const debouncedSearch = useDebounce(search, 300)
+
   const fetchFlags = async (signal?: AbortSignal) => {
     try {
       setLoading(true)
       setError('')
 
-      const response = await fetch(`${config.serverURL}${config.routes.api}/feature-flags?limit=1000`, {
+      // Use a reasonable limit to prevent performance issues
+      const limit = Math.min(1000, 100)
+      const response = await fetch(`${config.serverURL}${config.routes.api}/feature-flags?limit=${limit}`, {
         credentials: 'include',
         signal,
       })
@@ -142,12 +164,13 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
     // Filter out null/undefined entries first
     let filtered = flags.filter(flag => flag && flag.name)
 
-    // Filter by search
-    if (search) {
+    // Filter by debounced search
+    if (debouncedSearch) {
+      const searchLower = debouncedSearch.toLowerCase()
       filtered = filtered.filter(flag =>
-        flag.name?.toLowerCase().includes(search.toLowerCase()) ||
-        flag.description?.toLowerCase().includes(search.toLowerCase()) ||
-        flag.tags?.some(t => t.tag?.toLowerCase().includes(search.toLowerCase()))
+        flag.name?.toLowerCase().includes(searchLower) ||
+        flag.description?.toLowerCase().includes(searchLower) ||
+        flag.tags?.some(t => t.tag?.toLowerCase().includes(searchLower))
       )
     }
 
@@ -167,7 +190,7 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
     })
 
     return filtered
-  }, [flags, search, sortField, sortDirection])
+  }, [flags, debouncedSearch, sortField, sortDirection])
 
   const SortIcon = ({ field }: { field: typeof sortField }) => {
     if (sortField !== field) {
@@ -219,15 +242,18 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
           Manage all feature flags in a spreadsheet view with inline editing capabilities
         </p>
         {!canUpdate && (
-          <div style={{
-            backgroundColor: styles.info + '20',
-            border: `1px solid ${styles.info}`,
-            borderRadius: '0.5rem',
-            padding: '0.75rem 1rem',
-            marginBottom: '1rem',
-            color: styles.info,
-            fontSize: '0.875rem'
-          }}>
+          <div
+            role="alert"
+            style={{
+              backgroundColor: styles.info + '20',
+              border: `1px solid ${styles.info}`,
+              borderRadius: '0.5rem',
+              padding: '0.75rem 1rem',
+              marginBottom: '1rem',
+              color: styles.info,
+              fontSize: '0.875rem'
+            }}
+          >
             <strong>Read-Only Access:</strong> You can view feature flags but cannot edit them. Contact your administrator to request update permissions.
           </div>
         )}
@@ -264,14 +290,17 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
           )}
 
           {error && (
-            <div style={{
-              marginBottom: '1rem',
-              backgroundColor: styles.error + '20',
-              border: `1px solid ${styles.error}`,
-              borderRadius: '0.5rem',
-              padding: '1rem',
-              color: styles.error
-            }}>
+            <div
+              role="alert"
+              style={{
+                marginBottom: '1rem',
+                backgroundColor: styles.error + '20',
+                border: `1px solid ${styles.error}`,
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                color: styles.error
+              }}
+            >
               <strong>Error:</strong> {error}
             </div>
           )}
@@ -450,7 +479,7 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
                     textAlign: 'center',
                     color: styles.textMuted
                   }}>
-                    {search ? 'No flags match your search' : 'No feature flags yet'}
+                    {debouncedSearch ? 'No flags match your search' : 'No feature flags yet'}
                   </td>
                 </tr>
               ) : (
@@ -483,7 +512,7 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
                       color: styles.text
                     }}>
                       <a
-                        href={`/admin/collections/feature-flags/${flag.id}`}
+                        href={`${config.routes.admin}/collections/feature-flags/${flag.id}`}
                         style={{
                           color: styles.info,
                           textDecoration: 'none',
@@ -528,8 +557,8 @@ const FeatureFlagsClientComponent = ({ initialFlags = [], canUpdate = true }: Fe
                           type="number"
                           value={flag.rolloutPercentage || 100}
                           onChange={(e) => {
-                            const value = Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
-                            updateFlag(flag.id, { rolloutPercentage: value })
+                            const value = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0))
+                            updateFlag(flag.id, { rolloutPercentage: Math.round(value) })
                           }}
                           disabled={!canUpdate || saving === flag.id}
                           min="0"

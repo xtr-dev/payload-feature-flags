@@ -21,11 +21,15 @@ interface FeatureFlag {
   updatedAt: string
 }
 
-async function fetchInitialFlags(payload: any): Promise<FeatureFlag[]> {
+async function fetchInitialFlags(payload: any, searchParams?: Record<string, any>): Promise<FeatureFlag[]> {
   try {
+    const limit = Math.min(1000, parseInt(searchParams?.limit as string) || 100)
+    const page = Math.max(1, parseInt(searchParams?.page as string) || 1)
+
     const result = await payload.find({
       collection: 'feature-flags',
-      limit: 1000,
+      limit,
+      page,
       sort: 'name',
     })
 
@@ -135,7 +139,7 @@ export default async function FeatureFlagsView({
   }
 
   // Fetch initial data server-side (only if user has access)
-  const initialFlags = await fetchInitialFlags(initPageResult.req.payload)
+  const initialFlags = await fetchInitialFlags(initPageResult.req.payload, searchParams)
 
   // Check if user can update feature flags
   const canUpdateFeatureFlags = permissions?.collections?.['feature-flags']?.update || false
