@@ -1,4 +1,6 @@
 'use client'
+import React from 'react'
+import type { ListViewClientProps } from 'payload'
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import {
   useConfig,
