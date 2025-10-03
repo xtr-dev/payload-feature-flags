@@ -53,17 +53,13 @@ const FeatureFlagsViewComponent = () => {
       })
       
       if (!response.ok) {
-        if (response.status === 404) {
-          setError('Feature flags API not enabled. Set enableApi: true in plugin config.')
-          return
-        }
         throw new Error(`Failed to fetch feature flags: ${response.statusText}`)
       }
-      
+
       const result = await response.json()
-      
-      // Convert the result object to an array if it's not already
-      const flagsArray = Array.isArray(result) ? result : Object.values(result || {})
+
+      // Extract docs array from Payload API response
+      const flagsArray = result.docs || []
       
       // Only update state if the component is still mounted (signal not aborted)
       if (!signal?.aborted) {

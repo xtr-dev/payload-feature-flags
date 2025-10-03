@@ -38,9 +38,8 @@ pnpm dev
 
 ```typescript
 payloadFeatureFlags({
-  enableRollouts: true,    // Percentage rollouts  
+  enableRollouts: true,    // Percentage rollouts
   enableVariants: true,    // A/B testing
-  enableApi: true,         // REST endpoints
   defaultValue: false,     // New flags start disabled
   // + custom fields and permissions
 })
@@ -48,12 +47,17 @@ payloadFeatureFlags({
 
 ## API Testing
 
+The plugin uses Payload's native REST API:
+
 ```bash
 # Get all flags
 curl http://localhost:3000/api/feature-flags
 
-# Get specific flag  
-curl http://localhost:3000/api/feature-flags/new-feature
+# Query specific flag
+curl 'http://localhost:3000/api/feature-flags?where[name][equals]=new-feature'
+
+# Get only enabled flags
+curl 'http://localhost:3000/api/feature-flags?where[enabled][equals]=true'
 ```
 
 

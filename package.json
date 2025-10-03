@@ -1,6 +1,6 @@
 {
   "name": "@xtr-dev/payload-feature-flags",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "description": "Feature flags plugin for Payload CMS - manage feature toggles, A/B tests, and gradual rollouts",
   "license": "MIT",
   "type": "module",

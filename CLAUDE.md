@@ -56,10 +56,10 @@ The plugin follows Payload's plugin architecture with multiple exports:
 - `getUserVariant()`: A/B testing variant selection
 - `getFeatureFlagsByTag()`: Query flags by tags
 
-#### API Endpoints (`src/endpoints/customEndpointHandler.ts`)
-- `GET /api/feature-flags` - List all active feature flags
-- `GET /api/feature-flags/:flag` - Get specific flag data
-- Only created when `enableApi: true`
+#### API Access
+- The plugin uses Payload's native REST API for the feature-flags collection
+- Standard Payload query syntax is supported
+- Collection access controls are enforced
 
 ### Collection Schema
 The plugin creates a feature flags collection with these key fields:
@@ -93,9 +93,9 @@ The plugin integrates with Payload by:
 4. Supporting full collection customization through `collectionOverrides`
 
 ### Security Considerations
-- REST API endpoints are disabled by default (`enableApi: false`)
 - Server-side hooks are the preferred method for accessing feature flags
 - Collection access can be restricted through `collectionOverrides.access`
+- API access follows standard Payload authentication and authorization
 
 ### Testing Setup
 The development configuration (`dev/payload.config.ts`) includes:

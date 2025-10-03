@@ -1,7 +1,5 @@
 import type { Config, CollectionConfig, Field } from 'payload'
 
-import { customEndpointHandler } from './endpoints/customEndpointHandler.js'
-
 export type CollectionOverrides = Partial<
   Omit<CollectionConfig, 'fields'>
 > & {
@@ -30,11 +28,6 @@ export type PayloadFeatureFlagsConfig = {
    */
   enableVariants?: boolean
   /**
-   * Enable REST API endpoints for feature flags
-   * @default false
-   */
-  enableApi?: boolean
-  /**
    * Override collection configuration
    */
   collectionOverrides?: CollectionOverrides
@@ -48,7 +41,6 @@ export const payloadFeatureFlags =
       defaultValue = false,
       enableRollouts = true,
       enableVariants = true,
-      enableApi = false,
       collectionOverrides,
     } = pluginOptions
 
@@ -205,24 +197,6 @@ export const payloadFeatureFlags =
     config.admin.components.views['feature-flags-overview'] = {
       Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView',
       path: '/feature-flags-overview',
-    }
-
-
-    // Add API endpoints if enabled
-    if (enableApi) {
-      // Add API endpoint for fetching feature flags
-      config.endpoints.push({
-        handler: customEndpointHandler(collectionSlug),
-        method: 'get',
-        path: '/feature-flags',
-      })
-
-      // Add endpoint for checking a specific feature flag
-      config.endpoints.push({
-        handler: customEndpointHandler(collectionSlug),
-        method: 'get',
-        path: '/feature-flags/:flag',
-      })
     }
 
     return config
