@@ -176,6 +176,44 @@ access: {
 }
 ```
 
+**Production Security Best Practices:**
+
+For production environments, consider implementing these additional security measures:
+
+```typescript
+// Example: API key authentication for external services
+collectionOverrides: {
+  access: {
+    read: ({ req }) => {
+      // Check for API key in headers for service-to-service calls
+      const apiKey = req.headers['x-api-key']
+      if (apiKey && apiKey === process.env.FEATURE_FLAGS_API_KEY) {
+        return true
+      }
+      // Fall back to user authentication
+      return !!req.user
+    }
+  }
+}
+```
+
+**Rate Limiting:** Use Payload's built-in rate limiting or implement middleware:
+
+```typescript
+// Example with express-rate-limit
+import rateLimit from 'express-rate-limit'
+
+const featureFlagLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+// Apply to your API routes
+app.use('/api/feature-flags', featureFlagLimiter)
+```
+
 **Important:** The plugin uses Payload's native REST API for the collection, which respects all access control rules.
 
 ## Usage
@@ -446,6 +484,38 @@ if (flag.enabled && flag.variants) {
   const variant = selectVariant(userId, flag.variants)
   // Render based on variant
 }
+```
+
+## Performance Considerations
+
+### Client-Side Caching
+
+For improved performance, consider implementing client-side caching when fetching feature flags:
+
+```typescript
+// Example: Simple cache with TTL
+class FeatureFlagCache {
+  private cache = new Map<string, { data: any; expiry: number }>()
+  private ttl = 5 * 60 * 1000 // 5 minutes
+
+  async get(key: string, fetcher: () => Promise<any>) {
+    const cached = this.cache.get(key)
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data
+    }
+
+    const data = await fetcher()
+    this.cache.set(key, { data, expiry: Date.now() + this.ttl })
+    return data
+  }
+}
+
+const flagCache = new FeatureFlagCache()
+
+// Use with the hooks
+const flags = await flagCache.get('all-flags', () =>
+  fetch('/api/feature-flags?limit=1000').then(r => r.json())
+)
 ```
 
 ## Migration
