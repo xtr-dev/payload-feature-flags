@@ -7,4 +7,5 @@ export {
   useRolloutCheck,
   withFeatureFlag,
   type FeatureFlag,
+  type FeatureFlagOptions,
 } from '../hooks/client.js'

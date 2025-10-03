@@ -1,6 +1,5 @@
 'use client'
-import React, { useCallback, useEffect, useState } from 'react'
-import { useConfig } from '@payloadcms/ui'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
 
 export interface FeatureFlag {
   name: string
@@ -14,21 +13,57 @@ export interface FeatureFlag {
   metadata?: any
 }
 
+export interface FeatureFlagOptions {
+  serverURL?: string
+  apiPath?: string
+  collectionSlug?: string
+}
+
+// Helper to get config from options or defaults
+function getConfig(options?: FeatureFlagOptions) {
+  // In server-side environments, serverURL must be explicitly provided
+  const serverURL = options?.serverURL ||
+    (typeof window !== 'undefined' ? window.location.origin : undefined)
+
+  if (!serverURL) {
+    console.warn(
+      'FeatureFlags: serverURL must be provided when using hooks in server-side environment. ' +
+      'Falling back to relative URL which may not work correctly.'
+    )
+    // Use relative URL as fallback - will work if API is on same domain
+    return { serverURL: '', apiPath: options?.apiPath || '/api', collectionSlug: options?.collectionSlug || 'feature-flags' }
+  }
+
+  const apiPath = options?.apiPath || '/api'
+  const collectionSlug = options?.collectionSlug || 'feature-flags'
+
+  return { serverURL, apiPath, collectionSlug }
+}
+
 /**
  * Hook to fetch all active feature flags from the API
  */
 export function useFeatureFlags(
-  initialFlags: Partial<FeatureFlag>[]
+  initialFlags: Partial<FeatureFlag>[],
+  options?: FeatureFlagOptions
 ): {
   flags: Partial<FeatureFlag>[]
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
 } {
-  const { config } = useConfig()
+  const { serverURL, apiPath, collectionSlug } = getConfig(options)
   const [flags, setFlags] = useState<Partial<FeatureFlag>[]>(initialFlags)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Use ref to store initialFlags to avoid re-creating fetchFlags on every render
+  const initialFlagsRef = useRef(initialFlags)
+
+  // Update ref when initialFlags changes (but won't trigger re-fetch)
+  useEffect(() => {
+    initialFlagsRef.current = initialFlags
+  }, [initialFlags])
 
   const fetchFlags = useCallback(async () => {
     try {
@@ -36,12 +71,12 @@ export function useFeatureFlags(
       setError(null)
 
       // Use Payload's native collection API
-      const names = initialFlags.map(f => f.name).filter(Boolean)
+      const names = initialFlagsRef.current.map(f => f.name).filter(Boolean)
       const query = names.length > 0
         ? `?where[name][in]=${names.join(',')}&limit=1000`
         : '?limit=1000'
 
-      const response = await fetch(`${config.serverURL}${config.routes.api}/feature-flags${query}`)
+      const response = await fetch(`${serverURL}${apiPath}/${collectionSlug}${query}`)
 
       if (!response.ok) {
         throw new Error(`Failed to fetch feature flags: ${response.statusText}`)
@@ -64,7 +99,7 @@ export function useFeatureFlags(
       }
 
       // Sort flags based on the order of names in initialFlags
-      const sortedFlags = initialFlags.map(initialFlag => {
+      const sortedFlags = initialFlagsRef.current.map(initialFlag => {
         const fetchedFlag = fetchedFlagsMap.get(initialFlag.name!)
         // Use fetched flag if available, otherwise keep the initial flag
         return fetchedFlag || initialFlag
@@ -77,7 +112,7 @@ export function useFeatureFlags(
     } finally {
       setLoading(false)
     }
-  }, [config.serverURL, config.routes.api, initialFlags])
+  }, [serverURL, apiPath, collectionSlug]) // Remove initialFlags from dependencies
 
   useEffect(() => {
     void fetchFlags()
@@ -89,13 +124,16 @@ export function useFeatureFlags(
 /**
  * Hook to check if a specific feature flag is enabled
  */
-export function useFeatureFlag(flagName: string): {
+export function useFeatureFlag(
+  flagName: string,
+  options?: FeatureFlagOptions
+): {
   isEnabled: boolean
   flag: Partial<FeatureFlag> | null
   loading: boolean
   error: string | null
 } {
-  const { flags, loading, error } = useFeatureFlags([{ name: flagName }])
+  const { flags, loading, error } = useFeatureFlags([{ name: flagName }], options)
 
   const flag = flags.find(f => f.name === flagName) || null
   const isEnabled = flag?.enabled || false
@@ -106,13 +144,16 @@ export function useFeatureFlag(flagName: string): {
 /**
  * Hook to fetch a specific feature flag from the API
  */
-export function useSpecificFeatureFlag(flagName: string): {
+export function useSpecificFeatureFlag(
+  flagName: string,
+  options?: FeatureFlagOptions
+): {
   flag: FeatureFlag | null
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
 } {
-  const { config } = useConfig()
+  const { serverURL, apiPath, collectionSlug } = getConfig(options)
   const [flag, setFlag] = useState<FeatureFlag | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -124,7 +165,7 @@ export function useSpecificFeatureFlag(flagName: string): {
 
       // Use Payload's native collection API with query filter
       const response = await fetch(
-        `${config.serverURL}${config.routes.api}/feature-flags?where[name][equals]=${flagName}&limit=1`
+        `${serverURL}${apiPath}/${collectionSlug}?where[name][equals]=${flagName}&limit=1`
       )
 
       if (!response.ok) {
@@ -153,7 +194,7 @@ export function useSpecificFeatureFlag(flagName: string): {
     } finally {
       setLoading(false)
     }
-  }, [config.serverURL, config.routes.api, flagName])
+  }, [serverURL, apiPath, collectionSlug, flagName])
 
   useEffect(() => {
     void fetchFlag()
@@ -167,14 +208,15 @@ export function useSpecificFeatureFlag(flagName: string): {
  */
 export function useVariantSelection(
   flagName: string,
-  userId: string
+  userId: string,
+  options?: FeatureFlagOptions
 ): {
   variant: string | null
   flag: FeatureFlag | null
   loading: boolean
   error: string | null
 } {
-  const { flag, loading, error } = useSpecificFeatureFlag(flagName)
+  const { flag, loading, error } = useSpecificFeatureFlag(flagName, options)
 
   const variant = flag?.enabled && flag.variants
     ? selectVariantForUser(userId, flag.variants)
@@ -188,14 +230,15 @@ export function useVariantSelection(
  */
 export function useRolloutCheck(
   flagName: string,
-  userId: string
+  userId: string,
+  options?: FeatureFlagOptions
 ): {
   isInRollout: boolean
   flag: FeatureFlag | null
   loading: boolean
   error: string | null
 } {
-  const { flag, loading, error } = useSpecificFeatureFlag(flagName)
+  const { flag, loading, error } = useSpecificFeatureFlag(flagName, options)
 
   const isInRollout = flag?.enabled
     ? checkUserInRollout(userId, flag.rolloutPercentage || 100)
@@ -253,13 +296,14 @@ function checkUserInRollout(userId: string, percentage: number): boolean {
  */
 export function withFeatureFlag<P extends Record<string, any>>(
   flagName: string,
-  FallbackComponent?: React.ComponentType<P>
+  FallbackComponent?: React.ComponentType<P>,
+  options?: FeatureFlagOptions
 ) {
   return function FeatureFlagWrapper(
     WrappedComponent: React.ComponentType<P>
   ): React.ComponentType<P> {
     return function WithFeatureFlagComponent(props: P): React.ReactElement | null {
-      const { isEnabled, loading } = useFeatureFlag(flagName)
+      const { isEnabled, loading } = useFeatureFlag(flagName, options)
 
       if (loading) {
         return null // or a loading spinner
