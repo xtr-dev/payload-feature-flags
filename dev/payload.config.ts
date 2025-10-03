@@ -127,7 +127,6 @@ export default buildConfig({
       // Enable all features
       enableRollouts: true,
       enableVariants: true,
-      enableApi: true,
       defaultValue: false,
 
       // Custom collection configuration

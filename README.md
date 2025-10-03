@@ -51,7 +51,6 @@ export default buildConfig({
       defaultValue: false,       // New flags start disabled
       enableRollouts: true,      // Allow percentage rollouts
       enableVariants: true,      // Allow A/B testing
-      enableApi: false,          // REST API endpoints
       disabled: false,           // Plugin enabled
     }),
   ],
@@ -81,12 +80,6 @@ export type PayloadFeatureFlagsConfig = {
    * @default true
    */
   enableVariants?: boolean
-  
-  /**
-   * Enable REST API endpoints for feature flags
-   * @default false
-   */
-  enableApi?: boolean
   
   /**
    * Disable the plugin while keeping the database schema intact
@@ -166,14 +159,14 @@ payloadFeatureFlags({
 
 ### Security Considerations
 
-**API Access Control:** When `enableApi: true`, the REST endpoints respect your collection access controls:
+**Collection Access Control:** The feature flags collection uses Payload's standard access control system:
 
 ```typescript
-// Example: Secure API access
+// Example: Secure collection access
 access: {
   // Option 1: Simple authentication check
   read: ({ req: { user } }) => !!user, // Only authenticated users
-  
+
   // Option 2: More granular control
   read: ({ req: { user } }) => {
     if (!user) return false                      // No anonymous access
@@ -183,7 +176,45 @@ access: {
 }
 ```
 
-**Important:** The plugin does not implement separate API authentication - it uses Payload's collection access system for security.
+**Production Security Best Practices:**
+
+For production environments, consider implementing these additional security measures:
+
+```typescript
+// Example: API key authentication for external services
+collectionOverrides: {
+  access: {
+    read: ({ req }) => {
+      // Check for API key in headers for service-to-service calls
+      const apiKey = req.headers['x-api-key']
+      if (apiKey && apiKey === process.env.FEATURE_FLAGS_API_KEY) {
+        return true
+      }
+      // Fall back to user authentication
+      return !!req.user
+    }
+  }
+}
+```
+
+**Rate Limiting:** Use Payload's built-in rate limiting or implement middleware:
+
+```typescript
+// Example with express-rate-limit
+import rateLimit from 'express-rate-limit'
+
+const featureFlagLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+// Apply to your API routes
+app.use('/api/feature-flags', featureFlagLimiter)
+```
+
+**Important:** The plugin uses Payload's native REST API for the collection, which respects all access control rules.
 
 ## Usage
 
@@ -259,75 +290,109 @@ export default async function ProductPage({ userId }: { userId: string }) {
 
 ### Using Feature Flags via REST API
 
-If you have `enableApi: true`, you can use the REST API endpoints:
+The plugin uses Payload's native REST API for the collection. You can access feature flags through the standard Payload REST endpoints:
 
 ```typescript
-// Check if a specific feature is enabled
-const response = await fetch('/api/feature-flags/new-dashboard')
-const flag = await response.json()
+// Get all feature flags
+const response = await fetch('/api/feature-flags')
+const result = await response.json()
+// result.docs contains the array of feature flags
 
-if (flag.enabled) {
+// Query specific feature flags
+const response = await fetch('/api/feature-flags?where[name][equals]=new-dashboard')
+const result = await response.json()
+if (result.docs.length > 0 && result.docs[0].enabled) {
   // Show new dashboard
 }
 
-// Get all active feature flags
-const allFlags = await fetch('/api/feature-flags')
-const flags = await allFlags.json()
+// Get only enabled flags
+const response = await fetch('/api/feature-flags?where[enabled][equals]=true')
+const result = await response.json()
 ```
 
 **Important Security Notes:**
-- REST API endpoints are disabled by default (`enableApi: false`)
 - **API endpoints respect your collection access controls** - they don't bypass security
 - Configure access permissions using `collectionOverrides.access` (see example above)
 - Anonymous users can only access flags if you explicitly allow it in access controls
 
 ### API Endpoints
 
-When `enableApi: true`, the plugin exposes the following endpoints:
+The plugin uses Payload's standard REST API endpoints for the feature-flags collection:
 
-#### Get All Active Feature Flags
+#### Get All Feature Flags
 
 ```http
 GET /api/feature-flags
 ```
 
-Returns all enabled feature flags:
+Returns paginated feature flags:
 
 ```json
 {
-  "new-dashboard": {
-    "enabled": true,
-    "rolloutPercentage": 50,
-    "variants": null,
-    "metadata": {}
-  },
-  "beta-feature": {
-    "enabled": true,
-    "rolloutPercentage": 100,
-    "variants": [
-      { "name": "control", "weight": 50, "metadata": {} },
-      { "name": "variant-a", "weight": 50, "metadata": {} }
-    ],
-    "metadata": {}
-  }
+  "docs": [
+    {
+      "id": "...",
+      "name": "new-dashboard",
+      "enabled": true,
+      "rolloutPercentage": 50,
+      "variants": null,
+      "metadata": {},
+      "createdAt": "...",
+      "updatedAt": "..."
+    },
+    {
+      "id": "...",
+      "name": "beta-feature",
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "variants": [
+        { "name": "control", "weight": 50, "metadata": {} },
+        { "name": "variant-a", "weight": 50, "metadata": {} }
+      ],
+      "metadata": {},
+      "createdAt": "...",
+      "updatedAt": "..."
+    }
+  ],
+  "totalDocs": 2,
+  "limit": 10,
+  "page": 1,
+  "totalPages": 1,
+  "pagingCounter": 1,
+  "hasPrevPage": false,
+  "hasNextPage": false
 }
 ```
 
-#### Get Specific Feature Flag
+#### Query Specific Feature Flag
 
 ```http
-GET /api/feature-flags/:flagName
+GET /api/feature-flags?where[name][equals]=new-dashboard
 ```
 
-Returns a specific feature flag:
+Returns matching feature flags:
 
 ```json
 {
-  "name": "new-dashboard",
-  "enabled": true,
-  "rolloutPercentage": 50,
-  "variants": null,
-  "metadata": {}
+  "docs": [
+    {
+      "id": "...",
+      "name": "new-dashboard",
+      "enabled": true,
+      "rolloutPercentage": 50,
+      "variants": null,
+      "metadata": {},
+      "createdAt": "...",
+      "updatedAt": "..."
+    }
+  ],
+  "totalDocs": 1,
+  "limit": 10,
+  "page": 1,
+  "totalPages": 1,
+  "pagingCounter": 1,
+  "hasPrevPage": false,
+  "hasNextPage": false
 }
 ```
 
@@ -419,6 +484,38 @@ if (flag.enabled && flag.variants) {
   const variant = selectVariant(userId, flag.variants)
   // Render based on variant
 }
+```
+
+## Performance Considerations
+
+### Client-Side Caching
+
+For improved performance, consider implementing client-side caching when fetching feature flags:
+
+```typescript
+// Example: Simple cache with TTL
+class FeatureFlagCache {
+  private cache = new Map<string, { data: any; expiry: number }>()
+  private ttl = 5 * 60 * 1000 // 5 minutes
+
+  async get(key: string, fetcher: () => Promise<any>) {
+    const cached = this.cache.get(key)
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data
+    }
+
+    const data = await fetcher()
+    this.cache.set(key, { data, expiry: Date.now() + this.ttl })
+    return data
+  }
+}
+
+const flagCache = new FeatureFlagCache()
+
+// Use with the hooks
+const flags = await flagCache.get('all-flags', () =>
+  fetch('/api/feature-flags?limit=1000').then(r => r.json())
+)
 ```
 
 ## Migration

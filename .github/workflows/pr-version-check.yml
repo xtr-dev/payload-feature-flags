@@ -1,0 +1,43 @@
+name: PR Version Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize]
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR branch package.json version
+        id: pr-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Get main branch package.json version
+        id: main-version
+        run: |
+          git checkout main
+          echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        run: |
+          PR_VERSION="${{ steps.pr-version.outputs.version }}"
+          MAIN_VERSION="${{ steps.main-version.outputs.version }}"
+
+          echo "PR branch version: $PR_VERSION"
+          echo "Main branch version: $MAIN_VERSION"
+
+          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
+            echo "❌ Version must be updated in package.json"
+            echo "Current version: $MAIN_VERSION"
+            echo "Please increment the version number before merging to main"
+            exit 1
+          else
+            echo "✅ Version has been updated from $MAIN_VERSION to $PR_VERSION"
+          fi

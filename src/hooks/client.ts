@@ -17,14 +17,16 @@ export interface FeatureFlag {
 /**
  * Hook to fetch all active feature flags from the API
  */
-export function useFeatureFlags(): {
-  flags: Record<string, FeatureFlag> | null
+export function useFeatureFlags(
+  initialFlags: Partial<FeatureFlag>[]
+): {
+  flags: Partial<FeatureFlag>[]
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
 } {
   const { config } = useConfig()
-  const [flags, setFlags] = useState<Record<string, FeatureFlag> | null>(null)
+  const [flags, setFlags] = useState<Partial<FeatureFlag>[]>(initialFlags)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,25 +35,49 @@ export function useFeatureFlags(): {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`${config.serverURL}${config.routes.api}/feature-flags`)
-      
+      // Use Payload's native collection API
+      const names = initialFlags.map(f => f.name).filter(Boolean)
+      const query = names.length > 0
+        ? `?where[name][in]=${names.join(',')}&limit=1000`
+        : '?limit=1000'
+
+      const response = await fetch(`${config.serverURL}${config.routes.api}/feature-flags${query}`)
+
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('Feature flags API not enabled. Set enableApi: true in plugin config.')
-        }
         throw new Error(`Failed to fetch feature flags: ${response.statusText}`)
       }
 
       const result = await response.json()
-      setFlags(result)
+
+      // Create a map of fetched flags by name for quick lookup
+      const fetchedFlagsMap = new Map<string, Partial<FeatureFlag>>()
+      if (result.docs && Array.isArray(result.docs)) {
+        result.docs.forEach((doc: any) => {
+          fetchedFlagsMap.set(doc.name, {
+            name: doc.name,
+            enabled: doc.enabled,
+            rolloutPercentage: doc.rolloutPercentage,
+            variants: doc.variants,
+            metadata: doc.metadata,
+          })
+        })
+      }
+
+      // Sort flags based on the order of names in initialFlags
+      const sortedFlags = initialFlags.map(initialFlag => {
+        const fetchedFlag = fetchedFlagsMap.get(initialFlag.name!)
+        // Use fetched flag if available, otherwise keep the initial flag
+        return fetchedFlag || initialFlag
+      })
+
+      setFlags(sortedFlags)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
       setError(errorMessage)
-      setFlags(null)
     } finally {
       setLoading(false)
     }
-  }, [config.serverURL, config.routes.api])
+  }, [config.serverURL, config.routes.api, initialFlags])
 
   useEffect(() => {
     void fetchFlags()
@@ -65,13 +91,13 @@ export function useFeatureFlags(): {
  */
 export function useFeatureFlag(flagName: string): {
   isEnabled: boolean
-  flag: FeatureFlag | null
+  flag: Partial<FeatureFlag> | null
   loading: boolean
   error: string | null
 } {
-  const { flags, loading, error } = useFeatureFlags()
-  
-  const flag = flags?.[flagName] || null
+  const { flags, loading, error } = useFeatureFlags([{ name: flagName }])
+
+  const flag = flags.find(f => f.name === flagName) || null
   const isEnabled = flag?.enabled || false
 
   return { isEnabled, flag, loading, error }
@@ -96,19 +122,30 @@ export function useSpecificFeatureFlag(flagName: string): {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`${config.serverURL}${config.routes.api}/feature-flags/${flagName}`)
-      
+      // Use Payload's native collection API with query filter
+      const response = await fetch(
+        `${config.serverURL}${config.routes.api}/feature-flags?where[name][equals]=${flagName}&limit=1`
+      )
+
       if (!response.ok) {
-        if (response.status === 404) {
-          setFlag(null)
-          setError(`Feature flag '${flagName}' not found`)
-          return
-        }
         throw new Error(`Failed to fetch feature flag: ${response.statusText}`)
       }
 
       const result = await response.json()
-      setFlag(result)
+
+      if (result.docs && result.docs.length > 0) {
+        const doc = result.docs[0]
+        setFlag({
+          name: doc.name,
+          enabled: doc.enabled,
+          rolloutPercentage: doc.rolloutPercentage,
+          variants: doc.variants,
+          metadata: doc.metadata,
+        })
+      } else {
+        setFlag(null)
+        setError(`Feature flag '${flagName}' not found`)
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
       setError(errorMessage)
@@ -129,7 +166,7 @@ export function useSpecificFeatureFlag(flagName: string): {
  * Utility hook for A/B testing - selects a variant based on user ID
  */
 export function useVariantSelection(
-  flagName: string, 
+  flagName: string,
   userId: string
 ): {
   variant: string | null
@@ -138,8 +175,8 @@ export function useVariantSelection(
   error: string | null
 } {
   const { flag, loading, error } = useSpecificFeatureFlag(flagName)
-  
-  const variant = flag?.enabled && flag.variants 
+
+  const variant = flag?.enabled && flag.variants
     ? selectVariantForUser(userId, flag.variants)
     : null
 
@@ -150,7 +187,7 @@ export function useVariantSelection(
  * Utility hook to check if user is in rollout percentage
  */
 export function useRolloutCheck(
-  flagName: string, 
+  flagName: string,
   userId: string
 ): {
   isInRollout: boolean
@@ -159,8 +196,8 @@ export function useRolloutCheck(
   error: string | null
 } {
   const { flag, loading, error } = useSpecificFeatureFlag(flagName)
-  
-  const isInRollout = flag?.enabled 
+
+  const isInRollout = flag?.enabled
     ? checkUserInRollout(userId, flag.rolloutPercentage || 100)
     : false
 
@@ -173,26 +210,26 @@ export function useRolloutCheck(
  * Select variant for a user based on consistent hashing
  */
 function selectVariantForUser(
-  userId: string, 
+  userId: string,
   variants: Array<{ name: string; weight: number }>
 ): string | null {
   if (variants.length === 0) return null
-  
+
   // Simple hash function for consistent user bucketing
   const hash = Math.abs(userId.split('').reduce((acc, char) => {
     return ((acc << 5) - acc) + char.charCodeAt(0)
   }, 0))
-  
+
   const bucket = hash % 100
   let cumulative = 0
-  
+
   for (const variant of variants) {
     cumulative += variant.weight
     if (bucket < cumulative) {
       return variant.name
     }
   }
-  
+
   return variants[0]?.name || null
 }
 
@@ -202,12 +239,12 @@ function selectVariantForUser(
 function checkUserInRollout(userId: string, percentage: number): boolean {
   if (percentage >= 100) return true
   if (percentage <= 0) return false
-  
+
   // Simple hash function for consistent user bucketing
   const hash = userId.split('').reduce((acc, char) => {
     return ((acc << 5) - acc) + char.charCodeAt(0)
   }, 0)
-  
+
   return (Math.abs(hash) % 100) < percentage
 }
 
@@ -223,15 +260,15 @@ export function withFeatureFlag<P extends Record<string, any>>(
   ): React.ComponentType<P> {
     return function WithFeatureFlagComponent(props: P): React.ReactElement | null {
       const { isEnabled, loading } = useFeatureFlag(flagName)
-      
+
       if (loading) {
         return null // or a loading spinner
       }
-      
+
       if (!isEnabled) {
         return FallbackComponent ? React.createElement(FallbackComponent, props) : null
       }
-      
+
       return React.createElement(WrappedComponent, props)
     }
   }
