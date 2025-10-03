@@ -34,6 +34,11 @@ export type PayloadFeatureFlagsConfig = {
    * Override collection configuration
    */
   collectionOverrides?: CollectionOverrides
+  /**
+   * Enable custom list view for feature flags
+   * @default false
+   */
+  enableCustomListView?: boolean
 }
 
 export const payloadFeatureFlags =
@@ -44,6 +49,7 @@ export const payloadFeatureFlags =
       defaultValue = false,
       enableRollouts = true,
       enableVariants = true,
+      enableCustomListView = false,
       collectionOverrides,
     } = pluginOptions
 
@@ -163,6 +169,14 @@ export const payloadFeatureFlags =
         useAsTitle: 'name',
         group: 'Configuration',
         description: 'Manage feature flags for your application',
+        components: enableCustomListView ? {
+          ...collectionOverrides?.admin?.components,
+          views: {
+            list: {
+              Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView'
+            }
+          }
+        } : (collectionOverrides?.admin?.components || {}),
         ...(collectionOverrides?.admin || {}),
       },
       fields,
