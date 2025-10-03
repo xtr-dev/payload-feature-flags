@@ -238,7 +238,7 @@ const FeatureFlagsClientComponent = ({
           color: styles.text,
           margin: '0 0 0.5rem 0'
         }}>
-          Feature Flags Dashboard
+          Feature Flags
         </h1>
         <p style={{
           color: styles.textMuted,
