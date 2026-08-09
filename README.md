@@ -88,6 +88,14 @@ export type PayloadFeatureFlagsConfig = {
   disabled?: boolean
   
   /**
+   * Replace the feature flags collection's list view in the admin panel
+   * with the plugin's custom overview. Merges with any components set in
+   * collectionOverrides.admin.components.
+   * @default false
+   */
+  enableCustomListView?: boolean
+  
+  /**
    * Override collection configuration
    */
   collectionOverrides?: {
