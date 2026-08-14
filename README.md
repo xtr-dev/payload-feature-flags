@@ -84,6 +84,8 @@ export type PayloadFeatureFlagsConfig = {
   /**
    * Enable the enhanced feature flags list view in the admin panel
    * @default false
+   * Note: if collectionOverrides.admin.components is also set, that value
+   * wins and this enhanced list view is silently dropped — see below.
    */
   enableCustomListView?: boolean
   
