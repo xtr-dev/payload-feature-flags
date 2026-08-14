@@ -252,6 +252,8 @@ The custom view provides a more user-friendly interface compared to the standard
 The plugin provides server-side hooks for React Server Components:
 
 ```tsx
+import { getPayload } from 'payload'
+import config from '@payload-config'
 import { 
   isFeatureEnabled, 
   getFeatureFlag,
@@ -261,21 +263,24 @@ import {
 
 // Simple feature check
 export default async function HomePage() {
-  const showNewDesign = await isFeatureEnabled('new-homepage-design')
+  const payload = await getPayload({ config })
+  const showNewDesign = await isFeatureEnabled('new-homepage-design', payload)
   
   return showNewDesign ? <NewHomePage /> : <LegacyHomePage />
 }
 
 // Percentage-based rollout
 export default async function Dashboard({ userId }: { userId: string }) {
-  const inRollout = await isUserInRollout('beta-dashboard', userId)
+  const payload = await getPayload({ config })
+  const inRollout = await isUserInRollout('beta-dashboard', userId, payload)
   
   return inRollout ? <BetaDashboard /> : <ClassicDashboard />
 }
 
 // A/B testing with variants
 export default async function ProductPage({ userId }: { userId: string }) {
-  const variant = await getUserVariant('product-page-test', userId)
+  const payload = await getPayload({ config })
+  const variant = await getUserVariant('product-page-test', userId, payload)
   
   switch(variant) {
     case 'layout-a':
@@ -419,10 +424,10 @@ The plugin creates a collection with the following fields:
 // Example: Check feature flag from your frontend
 async function checkFeature(flagName: string): Promise<boolean> {
   try {
-    const response = await fetch(`/api/feature-flags/${flagName}`)
+    const response = await fetch(`/api/feature-flags?where[name][equals]=${flagName}`)
     if (!response.ok) return false
-    const flag = await response.json()
-    return flag.enabled
+    const result = await response.json()
+    return result.docs[0]?.enabled ?? false
   } catch {
     return false // Default to disabled on error
   }
@@ -450,8 +455,9 @@ function isUserInRollout(userId: string, percentage: number): boolean {
 }
 
 // Check if user should see the feature
-const flag = await fetch('/api/feature-flags/new-feature').then(r => r.json())
-if (flag.enabled && isUserInRollout(userId, flag.rolloutPercentage)) {
+const result = await fetch('/api/feature-flags?where[name][equals]=new-feature').then(r => r.json())
+const flag = result.docs[0]
+if (flag?.enabled && isUserInRollout(userId, flag.rolloutPercentage)) {
   // Show feature to this user
 }
 ```
@@ -479,8 +485,9 @@ function selectVariant(userId: string, variants: Array<{name: string, weight: nu
 }
 
 // Usage
-const flag = await fetch('/api/feature-flags/homepage-test').then(r => r.json())
-if (flag.enabled && flag.variants) {
+const result = await fetch('/api/feature-flags?where[name][equals]=homepage-test').then(r => r.json())
+const flag = result.docs[0]
+if (flag?.enabled && flag.variants) {
   const variant = selectVariant(userId, flag.variants)
   // Render based on variant
 }
@@ -603,14 +610,16 @@ import {
 } from '@xtr-dev/payload-feature-flags/rsc'
 ```
 
+All of these take a `payload: Payload` instance as their final argument (obtained via `await getPayload({ config })` — see the RSC example above).
+
 #### Available Functions:
 
-- `getFeatureFlag(flagName: string)` - Get complete flag data
-- `isFeatureEnabled(flagName: string)` - Simple boolean check
-- `getAllFeatureFlags()` - Get all active flags
-- `isUserInRollout(flagName: string, userId: string)` - Check rollout percentage
-- `getUserVariant(flagName: string, userId: string)` - Get A/B test variant
-- `getFeatureFlagsByTag(tag: string)` - Get flags by tag
+- `getFeatureFlag(flagName: string, payload: Payload)` - Get complete flag data
+- `isFeatureEnabled(flagName: string, payload: Payload)` - Simple boolean check
+- `getAllFeatureFlags(payload: Payload)` - Get all active flags
+- `isUserInRollout(flagName: string, userId: string, payload: Payload)` - Check rollout percentage
+- `getUserVariant(flagName: string, userId: string, payload: Payload)` - Get A/B test variant
+- `getFeatureFlagsByTag(tag: string, payload: Payload)` - Get flags by tag
 
 ## Troubleshooting
 
