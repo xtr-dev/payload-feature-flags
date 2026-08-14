@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest'
 import { payloadFeatureFlags } from './index.js'
 
 describe('payloadFeatureFlags collectionOverrides pass-through', () => {
-  test('access, hooks and slug reach the collection unchanged', () => {
+  test('uses the configured slug and passes access and hooks through unchanged', () => {
     const cfg = { collections: [] } as unknown as Config
     const readFn = () => true
     const beforeFn = () => {}
