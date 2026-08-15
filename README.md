@@ -85,7 +85,8 @@ export type PayloadFeatureFlagsConfig = {
    * Enable the enhanced feature flags list view in the admin panel
    * @default false
    * Note: if collectionOverrides.admin.components is also set, that value
-   * wins and this enhanced list view is silently dropped — see below.
+   * wins and this enhanced list view is silently dropped — see "Note on
+   * admin.components" under Custom Fields and Access.
    */
   enableCustomListView?: boolean
   
@@ -163,6 +164,23 @@ payloadFeatureFlags({
     },
   },
 })
+```
+
+**Note on `admin.components`:** If you set `collectionOverrides.admin.components`, it replaces the whole components object the plugin builds internally — including the list view injected by `enableCustomListView` — rather than merging with it. Setting `admin.components` to anything, even `{}`, silently drops the enhanced list view. If you need both, re-add the list view yourself:
+
+```typescript
+collectionOverrides: {
+  admin: {
+    components: {
+      views: {
+        list: {
+          Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView',
+        },
+        // ...your other custom views
+      },
+    },
+  },
+},
 ```
 
 ### Security Considerations
