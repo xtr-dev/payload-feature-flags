@@ -89,7 +89,7 @@
   "peerDependencies": {
     "@payloadcms/ui": "^3.56.0",
     "payload": "^3.56.0",
-    "react": "^19.0.0"
+    "react": "^19.1.0"
   },
   "engines": {
     "node": "^18.20.2 || >=20.9.0",
