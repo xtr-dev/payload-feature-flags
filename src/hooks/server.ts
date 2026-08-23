@@ -3,6 +3,7 @@ import { cache } from "react"
 
 export interface FeatureFlag {
   name: string
+  description?: string
   enabled: boolean
   rolloutPercentage?: number
   variants?: Array<{
@@ -10,7 +11,28 @@ export interface FeatureFlag {
     weight: number
     metadata?: any
   }>
+  tags?: Array<{ tag: string }>
   metadata?: any
+}
+
+function toFeatureFlag(doc: {
+  name: unknown
+  enabled: unknown
+  description?: unknown
+  rolloutPercentage?: unknown
+  variants?: unknown
+  tags?: unknown
+  metadata?: unknown
+}): FeatureFlag {
+  return {
+    name: doc.name as string,
+    description: doc.description as string | undefined,
+    enabled: doc.enabled as boolean,
+    rolloutPercentage: doc.rolloutPercentage as number | undefined,
+    variants: doc.variants as FeatureFlag['variants'],
+    tags: doc.tags as FeatureFlag['tags'],
+    metadata: doc.metadata,
+  }
 }
 
 // Helper to get the collection slug from config
@@ -52,15 +74,7 @@ export const getFeatureFlag = cache(async (flagName: string, payload: Payload): 
       return null
     }
 
-    const flag = result.docs[0]
-
-    return {
-      name: flag.name as string,
-      enabled: flag.enabled as boolean,
-      rolloutPercentage: flag.rolloutPercentage as number | undefined,
-      variants: flag.variants as any,
-      metadata: flag.metadata,
-    }
+    return toFeatureFlag(result.docs[0])
   } catch (error) {
     console.error(`Failed to fetch feature flag ${flagName}:`, error)
     return null
@@ -95,13 +109,7 @@ export const getAllFeatureFlags = cache(async (payload: Payload): Promise<Record
     const flags: Record<string, FeatureFlag> = {}
 
     for (const doc of result.docs) {
-      flags[doc.name as string] = {
-        name: doc.name as string,
-        enabled: doc.enabled as boolean,
-        rolloutPercentage: doc.rolloutPercentage as number | undefined,
-        variants: doc.variants as any,
-        metadata: doc.metadata,
-      }
+      flags[doc.name as string] = toFeatureFlag(doc)
     }
 
     return flags
@@ -186,13 +194,7 @@ export const getFeatureFlagsByTag = cache(async (tag: string, payload: Payload):
       limit: 1000,
     })
 
-    return result.docs.map(doc => ({
-      name: doc.name as string,
-      enabled: doc.enabled as boolean,
-      rolloutPercentage: doc.rolloutPercentage as number | undefined,
-      variants: doc.variants as any,
-      metadata: doc.metadata,
-    }))
+    return result.docs.map(doc => toFeatureFlag(doc))
   } catch (error) {
     console.error(`Failed to fetch feature flags with tag ${tag}:`, error)
     return []
