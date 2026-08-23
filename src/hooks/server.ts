@@ -15,15 +15,50 @@ export interface FeatureFlag {
   metadata?: any
 }
 
+// Payload returns omitted optional fields as null; FeatureFlag advertises them as optional (`?:`).
+function nullToUndefined<T>(value: T | null | undefined): T | undefined {
+  return value ?? undefined
+}
+
+function mapVariants(value: unknown): FeatureFlag['variants'] {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  return value.map((entry) => {
+    const variant = (entry ?? {}) as Record<string, unknown>
+    return {
+      name: variant.name as string,
+      weight: variant.weight as number,
+      metadata: nullToUndefined(variant.metadata),
+    }
+  })
+}
+
+function mapTags(value: unknown): FeatureFlag['tags'] {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const tags: Array<{ tag: string }> = []
+  for (const entry of value) {
+    const tag = entry && typeof entry === 'object' ? (entry as Record<string, unknown>).tag : undefined
+    if (typeof tag === 'string') {
+      tags.push({ tag })
+    }
+  }
+  return tags
+}
+
 function toFeatureFlag(doc: Record<string, unknown>): FeatureFlag {
   return {
     name: doc.name as string,
-    description: doc.description as string | undefined,
+    description: nullToUndefined(doc.description as string | null | undefined),
     enabled: doc.enabled as boolean,
-    rolloutPercentage: doc.rolloutPercentage as number | undefined,
-    variants: doc.variants as FeatureFlag['variants'],
-    tags: doc.tags as FeatureFlag['tags'],
-    metadata: doc.metadata,
+    rolloutPercentage: nullToUndefined(doc.rolloutPercentage as number | null | undefined),
+    variants: mapVariants(doc.variants),
+    tags: mapTags(doc.tags),
+    metadata: nullToUndefined(doc.metadata),
   }
 }
 

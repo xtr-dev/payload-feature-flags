@@ -29,6 +29,42 @@ const storedCompleteFlag = {
   environment: 'production',
 }
 
+const sparseFlag = {
+  name: 'sparse-flag',
+  enabled: true,
+}
+
+const storedSparseFlag = {
+  name: 'sparse-flag',
+  description: null,
+  enabled: true,
+  rolloutPercentage: null,
+  variants: null,
+  tags: null,
+  metadata: null,
+  id: 'flag-2',
+  createdAt: '2026-08-23T00:00:00.000Z',
+  updatedAt: '2026-08-23T00:00:00.000Z',
+  environment: 'production',
+}
+
+const storedFlagWithNullableNestedFields = {
+  name: 'nullable-nested',
+  description: null,
+  enabled: true,
+  rolloutPercentage: null,
+  variants: [{ name: 'control', weight: 100, metadata: null, id: 'v1' }],
+  tags: [
+    { tag: null, id: 't1' },
+    { tag: 'homepage', id: 't2' },
+  ],
+  metadata: null,
+  id: 'flag-3',
+  createdAt: '2026-08-23T00:00:00.000Z',
+  updatedAt: '2026-08-23T00:00:00.000Z',
+  environment: 'production',
+}
+
 const makePayload = (docs: Array<typeof completeFlag | Record<string, unknown>>): Payload =>
   ({
     config: {
@@ -85,5 +121,37 @@ describe('RSC feature flag mappers', () => {
     const payload = makePayload([])
 
     await expect(getFeatureFlag('missing-flag', payload)).resolves.toBeNull()
+  })
+
+  test('getFeatureFlag maps omitted optional Payload fields to undefined', async () => {
+    const payload = makePayload([storedSparseFlag])
+    const flag = await getFeatureFlag('sparse-flag', payload)
+
+    expect(flag).toEqual(sparseFlag)
+    expect(flag?.description).toBeUndefined()
+    expect(flag?.rolloutPercentage).toBeUndefined()
+    expect(flag?.variants).toBeUndefined()
+    expect(flag?.tags).toBeUndefined()
+    expect(flag?.metadata).toBeUndefined()
+  })
+
+  test('getAllFeatureFlags maps omitted optional Payload fields to undefined', async () => {
+    const payload = makePayload([storedSparseFlag])
+    const flags = await getAllFeatureFlags(payload)
+
+    expect(flags).toEqual({ 'sparse-flag': sparseFlag })
+    expect(flags['sparse-flag']?.description).toBeUndefined()
+    expect(flags['sparse-flag']?.tags).toBeUndefined()
+  })
+
+  test('getFeatureFlag keeps string tags and drops null nested Payload fields', async () => {
+    const payload = makePayload([storedFlagWithNullableNestedFields])
+
+    await expect(getFeatureFlag('nullable-nested', payload)).resolves.toEqual({
+      name: 'nullable-nested',
+      enabled: true,
+      variants: [{ name: 'control', weight: 100 }],
+      tags: [{ tag: 'homepage' }],
+    })
   })
 })
