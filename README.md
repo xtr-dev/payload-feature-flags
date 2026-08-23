@@ -620,7 +620,7 @@ import {
 - `useSpecificFeatureFlag(flagName, options?)` - Fetch one complete flag, returning `flag`, `loading`, `error`, and `refetch`.
 - `useVariantSelection(flagName, userId, options?)` - Select a stable variant for a user, returning `variant`, `flag`, `loading`, and `error`.
 - `useRolloutCheck(flagName, userId, options?)` - Check whether a user is in a flag's rollout, returning `isInRollout`, `flag`, `loading`, and `error`.
-- `withFeatureFlag(flagName, FallbackComponent?, options?)` - Higher-order component that renders its wrapped component only when the flag is enabled.
+- `withFeatureFlag(flagName, FallbackComponent?, options?)(WrappedComponent)` - Higher-order component that renders `WrappedComponent` when the flag is enabled, and `FallbackComponent` when it is not.
 - `FeatureFlag` - Type describing a flag's name, enabled state, rollout percentage, variants, and metadata.
 - `FeatureFlagOptions` - Optional client configuration: `serverURL`, `apiPath`, and `collectionSlug`.
 
