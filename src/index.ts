@@ -159,8 +159,11 @@ export const payloadFeatureFlags =
       ? collectionOverrides.fields({ defaultFields })
       : defaultFields
 
-    // Extract field overrides from collectionOverrides
-    const { fields: _fieldsOverride, ...otherOverrides } = collectionOverrides || {}
+    // Extract field and admin overrides from collectionOverrides. Admin must be
+    // merged key by key rather than spread wholesale: a blanket spread of the
+    // user's admin object (whether here or via otherOverrides below) replaces the
+    // components key and silently discards enableCustomListView.
+    const { fields: _fieldsOverride, admin: adminOverride, ...otherOverrides } = collectionOverrides || {}
 
     // Create the feature flags collection with overrides
     const featureFlagsCollection: CollectionConfig = {
@@ -169,16 +172,16 @@ export const payloadFeatureFlags =
         useAsTitle: 'name',
         group: 'Configuration',
         description: 'Manage feature flags for your application',
+        ...(adminOverride || {}),
         components: enableCustomListView ? {
-          ...collectionOverrides?.admin?.components,
+          ...adminOverride?.components,
           views: {
-            ...collectionOverrides?.admin?.components?.views,
+            ...adminOverride?.components?.views,
             list: {
               Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView'
             }
           }
-        } : collectionOverrides?.admin?.components || {},
-        ...(collectionOverrides?.admin || {}),
+        } : adminOverride?.components || {},
       },
       fields,
       // Apply any other collection overrides
