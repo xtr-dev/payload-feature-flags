@@ -553,7 +553,7 @@ pnpm dev
 ```
 
 **What you get:**
-- 🗃️ **No database needed** - Uses in-memory MongoDB
+- 🗃️ **No database server needed** - Uses SQLite at `file:./dev.db`
 - 🎯 **Sample data included** - Ready-to-test feature flag
 - 🔑 **Auto-login** - Use `dev@payloadcms.com / test`
 - 📱 **Working dashboard** - See flags in action
