@@ -21,6 +21,14 @@ const completeFlag = {
   metadata: { owner: 'growth' },
 }
 
+const storedCompleteFlag = {
+  ...completeFlag,
+  id: 'flag-1',
+  createdAt: '2026-08-23T00:00:00.000Z',
+  updatedAt: '2026-08-23T00:00:00.000Z',
+  environment: 'production',
+}
+
 const makePayload = (docs: Array<typeof completeFlag | Record<string, unknown>>): Payload =>
   ({
     config: {
@@ -54,13 +62,13 @@ const makePayload = (docs: Array<typeof completeFlag | Record<string, unknown>>)
 
 describe('RSC feature flag mappers', () => {
   test('getFeatureFlag returns description and tags with the rest of the flag', async () => {
-    const payload = makePayload([completeFlag])
+    const payload = makePayload([storedCompleteFlag])
 
     await expect(getFeatureFlag('new-homepage', payload)).resolves.toEqual(completeFlag)
   })
 
   test('getAllFeatureFlags returns description and tags for each active flag', async () => {
-    const payload = makePayload([completeFlag])
+    const payload = makePayload([storedCompleteFlag])
 
     await expect(getAllFeatureFlags(payload)).resolves.toEqual({
       'new-homepage': completeFlag,
@@ -68,7 +76,7 @@ describe('RSC feature flag mappers', () => {
   })
 
   test('getFeatureFlagsByTag returns description and tags for matching flags', async () => {
-    const payload = makePayload([completeFlag])
+    const payload = makePayload([storedCompleteFlag])
 
     await expect(getFeatureFlagsByTag('homepage', payload)).resolves.toEqual([completeFlag])
   })

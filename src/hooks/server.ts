@@ -15,15 +15,7 @@ export interface FeatureFlag {
   metadata?: any
 }
 
-function toFeatureFlag(doc: {
-  name: unknown
-  enabled: unknown
-  description?: unknown
-  rolloutPercentage?: unknown
-  variants?: unknown
-  tags?: unknown
-  metadata?: unknown
-}): FeatureFlag {
+function toFeatureFlag(doc: Record<string, unknown>): FeatureFlag {
   return {
     name: doc.name as string,
     description: doc.description as string | undefined,
