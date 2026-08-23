@@ -553,7 +553,7 @@ pnpm dev
 ```
 
 **What you get:**
-- 🗃️ **No database needed** - Uses in-memory MongoDB
+- 🗃️ **No database server needed** - Uses SQLite at `file:./dev.db`
 - 🎯 **Sample data included** - Ready-to-test feature flag
 - 🔑 **Auto-login** - Use `dev@payloadcms.com / test`
 - 📱 **Working dashboard** - See flags in action
@@ -597,6 +597,32 @@ import { payloadFeatureFlags } from '@xtr-dev/payload-feature-flags'
 
 - `payloadFeatureFlags`: Main plugin configuration function
 - `PayloadFeatureFlagsConfig`: TypeScript type for configuration options
+
+### Client React API
+
+Import React hooks and the component-gating HOC from the `/client` entry point:
+
+```typescript
+import {
+  useFeatureFlags,
+  useFeatureFlag,
+  useSpecificFeatureFlag,
+  useVariantSelection,
+  useRolloutCheck,
+  withFeatureFlag,
+  type FeatureFlag,
+  type FeatureFlagOptions,
+} from '@xtr-dev/payload-feature-flags/client'
+```
+
+- `useFeatureFlags(initialFlags, options?)` - Fetch feature flags, returning `flags`, `loading`, `error`, and `refetch`.
+- `useFeatureFlag(flagName, options?)` - Check whether one flag is enabled, returning `isEnabled`, `flag`, `loading`, and `error`.
+- `useSpecificFeatureFlag(flagName, options?)` - Fetch one complete flag, returning `flag`, `loading`, `error`, and `refetch`.
+- `useVariantSelection(flagName, userId, options?)` - Select a stable variant for a user, returning `variant`, `flag`, `loading`, and `error`.
+- `useRolloutCheck(flagName, userId, options?)` - Check whether a user is in a flag's rollout, returning `isInRollout`, `flag`, `loading`, and `error`.
+- `withFeatureFlag(flagName, FallbackComponent?, options?)(WrappedComponent)` - Higher-order component that renders `WrappedComponent` when the flag is enabled, and `FallbackComponent` when it is not.
+- `FeatureFlag` - Type describing a flag's name, enabled state, rollout percentage, variants, and metadata.
+- `FeatureFlagOptions` - Optional client configuration: `serverURL`, `apiPath`, and `collectionSlug`.
 
 ### Server Component Hooks (RSC Export)
 

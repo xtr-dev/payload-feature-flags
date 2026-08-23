@@ -2,7 +2,7 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'src/**'
       - 'dev/**'
@@ -21,6 +21,7 @@ jobs:
       !contains(github.event.pull_request.title, '[WIP]')
 
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: write
@@ -31,7 +32,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 1
+          # Full history so Claude can diff the PR against its base branch
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # The review allowlist includes lint/build/test, which need node_modules:
+      # the runner has no network for Claude, so install here instead. A
+      # lockfile drift should downgrade the review, not fail the workflow.
+      - name: Install dependencies
+        continue-on-error: true
+        run: pnpm install --frozen-lockfile
 
       - name: Run Claude Code Review
         id: claude-review
@@ -46,6 +64,9 @@ jobs:
           use_sticky_comment: true
 
           prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
             Review this pull request to the @xtr-dev/payload-feature-flags
             Payload CMS v3 plugin and give feedback on:
             - Correctness of the plugin config, collection schema and server hooks
@@ -57,9 +78,17 @@ jobs:
             - Potential bugs, performance issues and security concerns
             - Test coverage for new behaviour
 
-            Be constructive and concrete: point at files and lines, and skip
-            nitpicks that a linter would already catch.
+            The PR branch is checked out and `pnpm install` has already run, so
+            `pnpm lint`, `pnpm test:int` and `pnpm build` are available - run the
+            ones that are relevant to the change rather than reasoning about the
+            diff alone. There is no network access, so do not try to install
+            anything new.
+
+            Be constructive and concrete: use
+            `mcp__github_inline_comment__create_inline_comment` (with
+            `confirmed: true`) for issues tied to a specific line, keep the
+            summary in the tracking comment, and skip nitpicks that a linter
+            would already catch.
 
           claude_args: |
-            --max-turns 15
-            --allowedTools "Bash(pnpm install),Bash(pnpm build),Bash(pnpm lint),Bash(pnpm test),Bash(pnpm test:*)"
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(pnpm install:*),Bash(pnpm build:*),Bash(pnpm lint:*),Bash(pnpm test:*),Bash(pnpm dev:generate-types),Bash(npx tsc:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
