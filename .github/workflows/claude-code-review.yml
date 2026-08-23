@@ -61,5 +61,4 @@ jobs:
             nitpicks that a linter would already catch.
 
           claude_args: |
-            --max-turns 15
             --allowedTools "Bash(pnpm install),Bash(pnpm build),Bash(pnpm lint),Bash(pnpm test),Bash(pnpm test:*)"
