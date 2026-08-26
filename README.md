@@ -29,7 +29,7 @@ yarn add @xtr-dev/payload-feature-flags
 
 ## Requirements
 
-- Payload CMS v3.37.0+
+- Payload CMS v3.56.0+
 - Node.js 18.20.2+ or 20.9.0+
 - React 19.1.0+
 
@@ -80,6 +80,15 @@ export type PayloadFeatureFlagsConfig = {
    * @default true
    */
   enableVariants?: boolean
+
+  /**
+   * Enable the enhanced feature flags list view in the admin panel
+   * @default false
+   * Note: if collectionOverrides.admin.components is also set, that value
+   * wins and this enhanced list view is silently dropped — see "Note on
+   * admin.components" under Custom Fields and Access.
+   */
+  enableCustomListView?: boolean
   
   /**
    * Disable the plugin while keeping the database schema intact
@@ -163,6 +172,23 @@ payloadFeatureFlags({
     },
   },
 })
+```
+
+**Note on `admin.components`:** If you set `collectionOverrides.admin.components`, it replaces the whole components object the plugin builds internally — including the list view injected by `enableCustomListView` — rather than merging with it. Setting `admin.components` to anything, even `{}`, silently drops the enhanced list view. If you need both, re-add the list view yourself:
+
+```typescript
+collectionOverrides: {
+  admin: {
+    components: {
+      views: {
+        list: {
+          Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView',
+        },
+        // ...your other custom views
+      },
+    },
+  },
+},
 ```
 
 ### Security Considerations
@@ -651,12 +677,12 @@ import {
 ### Common Issues
 
 **Plugin not loading:**
-- Ensure Payload CMS v3.37.0+ is installed
+- Ensure Payload CMS v3.56.0+ is installed
 - Check that the plugin is properly added to the `plugins` array in your Payload config
 
 **Feature flags not appearing:**
-- Verify that collections are specified in the plugin configuration
 - Check that the plugin is not disabled (`disabled: false`)
+- Check that `collectionOverrides.access` allows the current user to read the feature flags collection
 
 **TypeScript errors:**
 - Ensure all peer dependencies are installed
