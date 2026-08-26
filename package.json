@@ -1,6 +1,6 @@
 {
   "name": "@xtr-dev/payload-feature-flags",
-  "version": "0.0.20",
+  "version": "0.0.22",
   "description": "Feature flags plugin for Payload CMS - manage feature toggles, A/B tests, and gradual rollouts",
   "license": "MIT",
   "type": "module",
@@ -69,7 +69,6 @@
     "copyfiles": "2.4.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.23.0",
-    "eslint-config-next": "15.4.4",
     "graphql": "^16.8.1",
     "mongodb-memory-server": "10.1.4",
     "next": "15.4.4",
