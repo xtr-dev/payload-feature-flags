@@ -65,6 +65,18 @@ describe('payloadFeatureFlags collection fields', () => {
     expect(enabled).toMatchObject({ defaultValue: expected })
   })
 
+  test('name field is required and unique', () => {
+    const name = getNamedField(getCollection().fields, 'name')
+
+    expect(name).toMatchObject({ required: true, unique: true })
+  })
+
+  test('enabled field is required', () => {
+    const enabled = getNamedField(getCollection().fields, 'enabled')
+
+    expect(enabled).toMatchObject({ required: true })
+  })
+
   test('preserves conditional field constraints and conditions', () => {
     const fields = getCollection().fields
     const rolloutPercentage = getNamedField(fields, 'rolloutPercentage')
