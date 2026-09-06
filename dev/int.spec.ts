@@ -57,35 +57,42 @@ describe('feature flags plugin', () => {
     // Unique per run: the sqlite file persists between local runs and `name` is unique
     const name = `int-test-${Date.now()}`
 
-    const created = await payload.create({
-      collection: 'feature-flags',
-      data: {
-        name,
-        description: 'created by dev/int.spec.ts',
-        enabled: true,
-        environment: 'staging',
-        rolloutPercentage: 25,
-        variants: [
-          { name: 'control', weight: 50 },
-          { name: 'variant-a', weight: 50 },
-        ],
-      },
-    })
+    try {
+      const created = await payload.create({
+        collection: 'feature-flags',
+        data: {
+          name,
+          description: 'created by dev/int.spec.ts',
+          enabled: true,
+          environment: 'staging',
+          rolloutPercentage: 25,
+          variants: [
+            { name: 'control', weight: 50 },
+            { name: 'variant-a', weight: 50 },
+          ],
+        },
+      })
 
-    const found = await payload.findByID({
-      collection: 'feature-flags',
-      id: created.id,
-    })
+      const found = await payload.findByID({
+        collection: 'feature-flags',
+        id: created.id,
+      })
 
-    expect(found.name).toBe(name)
-    expect(found.enabled).toBe(true)
-    expect(found.environment).toBe('staging')
-    expect(found.rolloutPercentage).toBe(25)
-    expect(found.variants).toHaveLength(2)
-    expect(found.variants[0].name).toBe('control')
-    expect(found.variants[0].weight).toBe(50)
-
-    await payload.delete({ collection: 'feature-flags', id: created.id })
+      expect(found.name).toBe(name)
+      expect(found.enabled).toBe(true)
+      expect(found.environment).toBe('staging')
+      expect(found.rolloutPercentage).toBe(25)
+      expect(found.variants).toHaveLength(2)
+      expect(found.variants[0].name).toBe('control')
+      expect(found.variants[0].weight).toBe(50)
+    } finally {
+      // The sqlite file persists between local runs. Delete here rather than
+      // after the expects, so a failed assertion cannot leave this row behind.
+      await payload.delete({
+        collection: 'feature-flags',
+        where: { name: { equals: name } },
+      })
+    }
   })
 
   test('the unique constraint on name reaches the adapter', async () => {
