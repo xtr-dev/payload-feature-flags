@@ -1,5 +1,24 @@
-import { describe, expect, test } from 'vitest'
+import { beforeEach, afterEach, describe, expect, test, vi } from 'vitest'
+import { useFeatureFlags, useSpecificFeatureFlag } from '../src/hooks/client.js'
 import { toFeatureFlag } from '../src/utils/mappers.js'
+
+const stateUpdates: unknown[] = []
+
+beforeEach(() => {
+  stateUpdates.length = 0
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+vi.mock('react', () => ({
+  default: {},
+  useCallback: (callback: () => unknown) => callback,
+  useEffect: () => undefined,
+  useRef: (current: unknown) => ({ current }),
+  useState: (initialValue: unknown) => [initialValue, (value: unknown) => stateUpdates.push(value)],
+}))
 
 const completeFlag = {
   name: 'new-homepage',
@@ -80,6 +99,48 @@ describe('Client and server feature flag mapper', () => {
       enabled: true,
       variants: [{ name: 'control', weight: 100 }],
       tags: [{ tag: 'homepage' }],
+    })
+  })
+
+  test('useFeatureFlags maps the fetched REST document before updating hook state', async () => {
+    const responseDocument = {
+      ...storedCompleteFlag,
+      description: 'Fetched description',
+      tags: [{ tag: 'fetched' }],
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ docs: [responseDocument] }),
+    }))
+
+    const hook = useFeatureFlags([{ name: responseDocument.name }], { serverURL: 'https://flags.test' })
+    await hook.refetch()
+
+    expect(stateUpdates).toContainEqual([toFeatureFlag(responseDocument)])
+  })
+
+  test('useSpecificFeatureFlag maps the fetched REST document before updating hook state', async () => {
+    const responseDocument = {
+      ...storedCompleteFlag,
+      description: 'Fetched description',
+      tags: [{ tag: 'fetched' }],
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ docs: [responseDocument] }),
+    }))
+
+    const hook = useSpecificFeatureFlag(responseDocument.name, { serverURL: 'https://flags.test' })
+    await hook.refetch()
+
+    expect(stateUpdates).toContainEqual({
+      name: responseDocument.name,
+      description: 'Fetched description',
+      enabled: true,
+      rolloutPercentage: 50,
+      variants: responseDocument.variants,
+      tags: [{ tag: 'fetched' }],
+      metadata: responseDocument.metadata,
     })
   })
 })
