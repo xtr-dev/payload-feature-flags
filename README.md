@@ -621,7 +621,7 @@ import {
 - `useVariantSelection(flagName, userId, options?)` - Select a stable variant for a user, returning `variant`, `flag`, `loading`, and `error`.
 - `useRolloutCheck(flagName, userId, options?)` - Check whether a user is in a flag's rollout, returning `isInRollout`, `flag`, `loading`, and `error`.
 - `withFeatureFlag(flagName, FallbackComponent?, options?)(WrappedComponent)` - Higher-order component that renders `WrappedComponent` when the flag is enabled, and `FallbackComponent` when it is not.
-- `FeatureFlag` - Type describing a flag's name, enabled state, rollout percentage, variants, and metadata.
+- `FeatureFlag` - Type describing a flag's name, description, enabled state, rollout percentage, variants, tags, and metadata.
 - `FeatureFlagOptions` - Optional client configuration: `serverURL`, `apiPath`, and `collectionSlug`.
 
 ### Server Component Hooks (RSC Export)

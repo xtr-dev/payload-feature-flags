@@ -15,6 +15,55 @@ export interface FeatureFlag {
   metadata?: any
 }
 
+// Payload returns omitted optional fields as null; FeatureFlag advertises them as optional (`?:`).
+// This normalization mirrors the RSC toFeatureFlag mapper in src/hooks/server.ts to ensure
+// consistent type contracts: null values become undefined, and { tag: null } entries are dropped.
+function nullToUndefined<T>(value: T | null | undefined): T | undefined {
+  return value ?? undefined
+}
+
+function mapVariants(value: unknown): FeatureFlag['variants'] {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  return value.map((entry) => {
+    const variant = (entry ?? {}) as Record<string, unknown>
+    return {
+      name: variant.name as string,
+      weight: variant.weight as number,
+      metadata: nullToUndefined(variant.metadata),
+    }
+  })
+}
+
+function mapTags(value: unknown): FeatureFlag['tags'] {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const tags: Array<{ tag: string }> = []
+  for (const entry of value) {
+    const tag = entry && typeof entry === 'object' ? (entry as Record<string, unknown>).tag : undefined
+    if (typeof tag === 'string') {
+      tags.push({ tag })
+    }
+  }
+  return tags
+}
+
+function normalizeFlag(doc: Record<string, unknown>): FeatureFlag {
+  return {
+    name: doc.name as string,
+    description: nullToUndefined(doc.description as string | null | undefined),
+    enabled: doc.enabled as boolean,
+    rolloutPercentage: nullToUndefined(doc.rolloutPercentage as number | null | undefined),
+    variants: mapVariants(doc.variants),
+    tags: mapTags(doc.tags),
+    metadata: nullToUndefined(doc.metadata),
+  }
+}
+
 export interface FeatureFlagOptions {
   serverURL?: string
   apiPath?: string
@@ -98,15 +147,7 @@ export function useFeatureFlags(
       const fetchedFlagsMap = new Map<string, Partial<FeatureFlag>>()
       if (result.docs && Array.isArray(result.docs)) {
         result.docs.forEach((doc: any) => {
-          fetchedFlagsMap.set(doc.name, {
-            name: doc.name,
-            description: doc.description,
-            enabled: doc.enabled,
-            rolloutPercentage: doc.rolloutPercentage,
-            variants: doc.variants,
-            tags: doc.tags,
-            metadata: doc.metadata,
-          })
+          fetchedFlagsMap.set(doc.name, normalizeFlag(doc))
         })
       }
 
@@ -188,15 +229,7 @@ export function useSpecificFeatureFlag(
 
       if (result.docs && result.docs.length > 0) {
         const doc = result.docs[0]
-        setFlag({
-          name: doc.name,
-          description: doc.description,
-          enabled: doc.enabled,
-          rolloutPercentage: doc.rolloutPercentage,
-          variants: doc.variants,
-          tags: doc.tags,
-          metadata: doc.metadata,
-        })
+        setFlag(normalizeFlag(doc))
       } else {
         setFlag(null)
         setError(`Feature flag '${flagName}' not found`)

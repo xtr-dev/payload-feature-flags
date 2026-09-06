@@ -16,11 +16,11 @@ export interface FeatureFlag {
 }
 
 // Payload returns omitted optional fields as null; FeatureFlag advertises them as optional (`?:`).
-function nullToUndefined<T>(value: T | null | undefined): T | undefined {
+export function nullToUndefined<T>(value: T | null | undefined): T | undefined {
   return value ?? undefined
 }
 
-function mapVariants(value: unknown): FeatureFlag['variants'] {
+export function mapVariants(value: unknown): FeatureFlag['variants'] {
   if (!Array.isArray(value)) {
     return undefined
   }
@@ -35,7 +35,7 @@ function mapVariants(value: unknown): FeatureFlag['variants'] {
   })
 }
 
-function mapTags(value: unknown): FeatureFlag['tags'] {
+export function mapTags(value: unknown): FeatureFlag['tags'] {
   if (!Array.isArray(value)) {
     return undefined
   }
@@ -50,7 +50,7 @@ function mapTags(value: unknown): FeatureFlag['tags'] {
   return tags
 }
 
-function toFeatureFlag(doc: Record<string, unknown>): FeatureFlag {
+export function toFeatureFlag(doc: Record<string, unknown>): FeatureFlag {
   return {
     name: doc.name as string,
     description: nullToUndefined(doc.description as string | null | undefined),
