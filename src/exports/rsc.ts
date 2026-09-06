@@ -6,5 +6,6 @@ export {
   isUserInRollout,
   getUserVariant,
   getFeatureFlagsByTag,
-  type FeatureFlag,
 } from '../hooks/server.js'
+
+export { type FeatureFlag } from '../utils/mappers.js'
