@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react'
 
 export interface FeatureFlag {
   name: string
+  description?: string
   enabled: boolean
   rolloutPercentage?: number
   variants?: Array<{
@@ -10,6 +11,7 @@ export interface FeatureFlag {
     weight: number
     metadata?: any
   }>
+  tags?: Array<{ tag: string }>
   metadata?: any
 }
 
@@ -98,9 +100,11 @@ export function useFeatureFlags(
         result.docs.forEach((doc: any) => {
           fetchedFlagsMap.set(doc.name, {
             name: doc.name,
+            description: doc.description,
             enabled: doc.enabled,
             rolloutPercentage: doc.rolloutPercentage,
             variants: doc.variants,
+            tags: doc.tags,
             metadata: doc.metadata,
           })
         })
@@ -186,9 +190,11 @@ export function useSpecificFeatureFlag(
         const doc = result.docs[0]
         setFlag({
           name: doc.name,
+          description: doc.description,
           enabled: doc.enabled,
           rolloutPercentage: doc.rolloutPercentage,
           variants: doc.variants,
+          tags: doc.tags,
           metadata: doc.metadata,
         })
       } else {
