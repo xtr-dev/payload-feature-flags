@@ -1,8 +1,8 @@
 name: Publish to NPM
 
 # Publishes only when the version in package.json is ahead of the version on
-# npm, so a merge that leaves the version alone skips cleanly. A release is a
-# deliberate PR that bumps the version. Follows payload-mailing's
+# npm, so a merge that leaves the version alone skips the publish cleanly. A
+# release is a deliberate PR that bumps the version. Follows payload-mailing's
 # version-and-publish.yml, but keeps this repo's NPM_TOKEN authentication and
 # its test and build steps.
 on:
@@ -74,6 +74,27 @@ jobs:
             echo "publish=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Install, tests and build run on every push to main, release or not. This
+      # workflow is the only place this repo runs them, so gating them on a
+      # release would leave every ordinary merge to main untested.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Run build
+        run: pnpm build
+
       - name: Abort if tag already exists
         if: steps.decide.outputs.publish == 'true'
         env:
@@ -84,29 +105,6 @@ jobs:
             echo "::error::Tag v$VERSION already exists but npm does not have $VERSION. Bump package.json to a new version to release."
             exit 1
           fi
-
-      - name: Setup Node.js
-        if: steps.decide.outputs.publish == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Setup pnpm
-        if: steps.decide.outputs.publish == 'true'
-        uses: pnpm/action-setup@v4
-
-      - name: Install dependencies
-        if: steps.decide.outputs.publish == 'true'
-        run: pnpm install --frozen-lockfile
-
-      - name: Run tests
-        if: steps.decide.outputs.publish == 'true'
-        run: pnpm test
-
-      - name: Run build
-        if: steps.decide.outputs.publish == 'true'
-        run: pnpm build
 
       - name: Publish to NPM
         if: steps.decide.outputs.publish == 'true'
