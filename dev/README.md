@@ -63,7 +63,7 @@ curl 'http://localhost:3000/api/feature-flags?where[enabled][equals]=true'
 
 ## Database
 
-Uses in-memory MongoDB - no setup needed! Data resets on each restart.
+Uses SQLite at `file:./dev.db` (or `DATABASE_URI`). No database server to start; data persists across restarts.
 
 ## Creating New Flags
 
@@ -84,7 +84,7 @@ Ready to use this in your project?
 
 1. **Add to your project:** Copy the plugin config
 2. **Customize:** Add your own fields and permissions  
-3. **Go live:** Use a real MongoDB database
+3. **Go live:** Use your production Payload database adapter
 4. **Monitor:** Track how your flags perform
 
 ---
