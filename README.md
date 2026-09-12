@@ -148,9 +148,6 @@ payloadFeatureFlags({
       },
     ],
     
-    // Disable versioning (enabled by default)
-    versions: false,
-    
     // Add hooks
     hooks: {
       beforeChange: [
