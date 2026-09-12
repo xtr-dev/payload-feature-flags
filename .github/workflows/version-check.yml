@@ -1,0 +1,95 @@
+name: Version Check
+
+# Checks the version only when a PR changes it. A PR that leaves the version in
+# package.json alone is not a release and passes, so ordinary PRs never have to
+# bump - and parallel PRs no longer break each other by bumping from the same
+# fork point. When a PR does bump, the bump must be a correct release. Follows
+# payload-mailing's version-check.yml.
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          # Full history and tags: the base branch's package.json and the
+          # existing release tags are both read below.
+          fetch-depth: 0
+
+      - name: Validate version bump (only if present)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          # True when $1 is a strictly higher version than $2. sort -V alone
+          # ranks 1.0.0-rc.1 above 1.0.0; turning the prerelease "-" into "~",
+          # which sort -V orders before anything, restores semver order.
+          is_newer() {
+            a="$(printf '%s' "$1" | sed 's/-/~/')"
+            b="$(printf '%s' "$2" | sed 's/-/~/')"
+            [ "$a" != "$b" ] && [ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | tail -n1)" = "$a" ]
+          }
+
+          PKG_NAME="$(node -p "require('./package.json').name")"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          BASE_VERSION="$(git show "origin/$BASE_REF:package.json" | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")"
+
+          echo "package.json version: $PKG_VERSION"
+          echo "$BASE_REF version: $BASE_VERSION"
+
+          # Whether this PR is a release is decided against the base branch, not
+          # against npm. payload-mailing compares with npm, but here main has run
+          # ahead of npm after failed publishes, and comparing with npm would
+          # treat every PR as a release.
+          if [ "$PKG_VERSION" = "$BASE_VERSION" ]; then
+            echo "::notice::No version change in this PR - it is not a release."
+            exit 0
+          fi
+
+          # A bump is present, so it has to be a correct release.
+
+          # 1) Valid semver.
+          if ! printf '%s' "$PKG_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "::error::package.json version '$PKG_VERSION' is not valid semver."
+            exit 1
+          fi
+
+          # 2) Strictly greater than the base branch.
+          if ! is_newer "$PKG_VERSION" "$BASE_VERSION"; then
+            echo "::error::package.json version ($PKG_VERSION) is not higher than $BASE_REF ($BASE_VERSION). A release must increase the version."
+            exit 1
+          fi
+
+          # 3) Strictly greater than the version published on npm. A package that
+          #    was never published reads as 0.0.0; any other npm failure stops
+          #    the check instead of passing a version it could not compare.
+          NPM_ERR="$RUNNER_TEMP/npm-view.err"
+          if NPM_VERSION="$(npm view "$PKG_NAME" version 2>"$NPM_ERR")"; then
+            echo "npm latest version: $NPM_VERSION"
+          elif grep -q 'E404' "$NPM_ERR"; then
+            NPM_VERSION="0.0.0"
+            echo "::notice::$PKG_NAME has never been published to npm."
+          else
+            cat "$NPM_ERR"
+            echo "::error::Could not read the published version of $PKG_NAME from npm."
+            exit 1
+          fi
+          if ! is_newer "$PKG_VERSION" "$NPM_VERSION"; then
+            echo "::error::package.json version ($PKG_VERSION) is not higher than the published npm version ($NPM_VERSION). A release must increase the version."
+            exit 1
+          fi
+
+          # 4) The release tag must not already exist.
+          if git rev-parse -q --verify "refs/tags/v$PKG_VERSION" >/dev/null; then
+            echo "::error::Tag v$PKG_VERSION already exists - choose a new version."
+            exit 1
+          fi
+
+          echo "✅ $PKG_VERSION is a valid release bump ($BASE_REF: $BASE_VERSION, npm: $NPM_VERSION). Merging will publish it."

@@ -71,7 +71,7 @@ The plugin creates a feature flags collection with these key fields:
 - `metadata`: Additional JSON data
 
 ### Development Environment
-- Uses MongoDB Memory Server for testing
+- Uses @payloadcms/db-sqlite for testing
 - Next.js for admin panel development
 - SWC for fast compilation
 - Vitest for integration testing
@@ -99,7 +99,7 @@ The plugin integrates with Payload by:
 
 ### Testing Setup
 The development configuration (`dev/payload.config.ts`) includes:
-- MongoDB Memory Server for isolated testing
+- @payloadcms/db-sqlite for isolated testing
 - Test collections (posts, media)
 - Example plugin configuration with collection overrides
 - Seeding functionality for development data
