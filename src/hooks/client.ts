@@ -1,17 +1,8 @@
 'use client'
 import React, { useCallback, useEffect, useState, useRef } from 'react'
+import { FeatureFlag, toFeatureFlag } from '../utils/mappers.js'
 
-export interface FeatureFlag {
-  name: string
-  enabled: boolean
-  rolloutPercentage?: number
-  variants?: Array<{
-    name: string
-    weight: number
-    metadata?: any
-  }>
-  metadata?: any
-}
+export type { FeatureFlag }
 
 export interface FeatureFlagOptions {
   serverURL?: string
@@ -96,13 +87,7 @@ export function useFeatureFlags(
       const fetchedFlagsMap = new Map<string, Partial<FeatureFlag>>()
       if (result.docs && Array.isArray(result.docs)) {
         result.docs.forEach((doc: any) => {
-          fetchedFlagsMap.set(doc.name, {
-            name: doc.name,
-            enabled: doc.enabled,
-            rolloutPercentage: doc.rolloutPercentage,
-            variants: doc.variants,
-            metadata: doc.metadata,
-          })
+          fetchedFlagsMap.set(doc.name, toFeatureFlag(doc))
         })
       }
 
@@ -184,13 +169,7 @@ export function useSpecificFeatureFlag(
 
       if (result.docs && result.docs.length > 0) {
         const doc = result.docs[0]
-        setFlag({
-          name: doc.name,
-          enabled: doc.enabled,
-          rolloutPercentage: doc.rolloutPercentage,
-          variants: doc.variants,
-          metadata: doc.metadata,
-        })
+        setFlag(toFeatureFlag(doc))
       } else {
         setFlag(null)
         setError(`Feature flag '${flagName}' not found`)
