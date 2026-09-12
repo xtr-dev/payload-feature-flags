@@ -18,6 +18,7 @@ jobs:
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
       pull-requests: write
@@ -28,7 +29,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 1
+          # Full history so Claude can diff against the base branch
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -38,6 +40,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
+
+      # Claude has no network access, so dependencies have to be in place
+      # before it starts. A lockfile drift should not fail the whole run.
+      - name: Install dependencies
+        continue-on-error: true
+        run: pnpm install --frozen-lockfile
 
       - name: Run Claude Code
         id: claude
@@ -50,5 +58,4 @@ jobs:
             actions: read
 
           claude_args: |
-            --max-turns 20
-            --allowedTools "Bash(pnpm install),Bash(pnpm build),Bash(pnpm build:*),Bash(pnpm lint),Bash(pnpm lint:fix),Bash(pnpm test),Bash(pnpm test:*),Bash(pnpm dev:generate-types)"
+            --allowedTools "Bash(pnpm install:*),Bash(pnpm build:*),Bash(pnpm lint:*),Bash(pnpm test:*),Bash(pnpm dev:generate-types),Bash(npx tsc:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git status:*)"

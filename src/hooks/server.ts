@@ -3,6 +3,7 @@ import { cache } from "react"
 
 export interface FeatureFlag {
   name: string
+  description?: string
   enabled: boolean
   rolloutPercentage?: number
   variants?: Array<{
@@ -10,7 +11,55 @@ export interface FeatureFlag {
     weight: number
     metadata?: any
   }>
+  tags?: Array<{ tag: string }>
   metadata?: any
+}
+
+// Payload returns omitted optional fields as null; FeatureFlag advertises them as optional (`?:`).
+function nullToUndefined<T>(value: T | null | undefined): T | undefined {
+  return value ?? undefined
+}
+
+function mapVariants(value: unknown): FeatureFlag['variants'] {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  return value.map((entry) => {
+    const variant = (entry ?? {}) as Record<string, unknown>
+    return {
+      name: variant.name as string,
+      weight: variant.weight as number,
+      metadata: nullToUndefined(variant.metadata),
+    }
+  })
+}
+
+function mapTags(value: unknown): FeatureFlag['tags'] {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const tags: Array<{ tag: string }> = []
+  for (const entry of value) {
+    const tag = entry && typeof entry === 'object' ? (entry as Record<string, unknown>).tag : undefined
+    if (typeof tag === 'string') {
+      tags.push({ tag })
+    }
+  }
+  return tags
+}
+
+function toFeatureFlag(doc: Record<string, unknown>): FeatureFlag {
+  return {
+    name: doc.name as string,
+    description: nullToUndefined(doc.description as string | null | undefined),
+    enabled: doc.enabled as boolean,
+    rolloutPercentage: nullToUndefined(doc.rolloutPercentage as number | null | undefined),
+    variants: mapVariants(doc.variants),
+    tags: mapTags(doc.tags),
+    metadata: nullToUndefined(doc.metadata),
+  }
 }
 
 // Helper to get the collection slug from config
@@ -52,15 +101,7 @@ export const getFeatureFlag = cache(async (flagName: string, payload: Payload): 
       return null
     }
 
-    const flag = result.docs[0]
-
-    return {
-      name: flag.name as string,
-      enabled: flag.enabled as boolean,
-      rolloutPercentage: flag.rolloutPercentage as number | undefined,
-      variants: flag.variants as any,
-      metadata: flag.metadata,
-    }
+    return toFeatureFlag(result.docs[0])
   } catch (error) {
     console.error(`Failed to fetch feature flag ${flagName}:`, error)
     return null
@@ -95,13 +136,7 @@ export const getAllFeatureFlags = cache(async (payload: Payload): Promise<Record
     const flags: Record<string, FeatureFlag> = {}
 
     for (const doc of result.docs) {
-      flags[doc.name as string] = {
-        name: doc.name as string,
-        enabled: doc.enabled as boolean,
-        rolloutPercentage: doc.rolloutPercentage as number | undefined,
-        variants: doc.variants as any,
-        metadata: doc.metadata,
-      }
+      flags[doc.name as string] = toFeatureFlag(doc)
     }
 
     return flags
@@ -186,13 +221,7 @@ export const getFeatureFlagsByTag = cache(async (tag: string, payload: Payload):
       limit: 1000,
     })
 
-    return result.docs.map(doc => ({
-      name: doc.name as string,
-      enabled: doc.enabled as boolean,
-      rolloutPercentage: doc.rolloutPercentage as number | undefined,
-      variants: doc.variants as any,
-      metadata: doc.metadata,
-    }))
+    return result.docs.map(doc => toFeatureFlag(doc))
   } catch (error) {
     console.error(`Failed to fetch feature flags with tag ${tag}:`, error)
     return []
