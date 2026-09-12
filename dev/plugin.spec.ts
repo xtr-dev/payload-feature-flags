@@ -88,3 +88,40 @@ describe('enableCustomListView', () => {
     expect(admin?.group).toBe('Configuration')
   })
 })
+
+describe('host configuration', () => {
+  test('adds the flags collection and overview without replacing host collections or views', () => {
+    const posts = { slug: 'posts', fields: [] }
+    const hostView = { Component: './HostDashboard', path: '/host' }
+
+    const config = payloadFeatureFlags()({
+      collections: [posts],
+      admin: { components: { views: { host: hostView } } },
+    } as unknown as Config)
+
+    expect(config.collections).toHaveLength(2)
+    expect(config.collections?.[0]).toBe(posts)
+    expect(config.collections?.[1]?.slug).toBe('feature-flags')
+    expect(config.admin?.components?.views?.host).toBe(hostView)
+    expect(config.admin?.components?.views?.['feature-flags-overview']).toEqual({
+      Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView',
+      path: '/feature-flags-overview',
+    })
+  })
+
+  test('keeps host collections and does not register the overview when disabled', () => {
+    const posts = { slug: 'posts', fields: [] }
+    const hostView = { Component: './HostDashboard', path: '/host' }
+
+    const config = payloadFeatureFlags({ disabled: true })({
+      collections: [posts],
+      admin: { components: { views: { host: hostView } } },
+    } as unknown as Config)
+
+    expect(config.collections).toHaveLength(2)
+    expect(config.collections?.[0]).toBe(posts)
+    expect(config.collections?.[1]?.slug).toBe('feature-flags')
+    expect(config.admin?.components?.views?.host).toBe(hostView)
+    expect(config.admin?.components?.views?.['feature-flags-overview']).toBeUndefined()
+  })
+})
