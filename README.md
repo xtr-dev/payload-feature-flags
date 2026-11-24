@@ -102,6 +102,15 @@ export type PayloadFeatureFlagsConfig = {
    * @default false
    */
   publicEndpoint?: boolean
+
+  /**
+   * Cache the RSC helpers across requests, cleared automatically when a flag
+   * is changed or deleted. true = Next.js unstable_cache with the tag
+   * 'payload-feature-flags', refreshed at least every 60 seconds; { tag?, revalidate? } = the same with your own
+   * settings; or pass your own FeatureFlagsCache.
+   * @default false
+   */
+  cache?: boolean | NextCacheOptions | FeatureFlagsCache
   
   /**
    * Override collection configuration
@@ -265,6 +274,7 @@ Once installed, the plugin automatically:
 3. **Adds a custom dashboard view** - Enhanced UI for managing flags at `/admin/feature-flags-overview`
 4. **Exposes REST API endpoints** - Simple endpoints for checking flag states
 5. **Keeps your data clean** - No modifications to your existing collections
+6. **Records its collection slug** - Under `config.custom.payloadFeatureFlags.collectionSlug`, which the server helpers read to find the flags collection (configs without it fall back to detecting the collection by its fields)
 
 ### Admin Interface
 
@@ -532,6 +542,21 @@ if (flag?.enabled && flag.variants) {
 ```
 
 ## Performance Considerations
+
+### Server-Side Caching Across Requests
+
+The RSC helpers use React `cache()`, which only dedupes calls within one request, so by default every request reads the database. Turn on the `cache` option to keep lookups between requests:
+
+```typescript
+payloadFeatureFlags({
+  cache: true, // Next.js unstable_cache, tag 'payload-feature-flags', revalidate 60s
+  // or: cache: { tag: 'my-flags', revalidate: 300 },
+})
+```
+
+The plugin adds `afterChange` and `afterDelete` hooks to the flags collection (after any hooks from `collectionOverrides`) that clear the cache, so a changed flag shows on the next request. This also works outside a request inside the Next.js process (Payload jobs, `onInit`): the plugin then clears the tag on Next's global incremental cache. Next.js only creates that cache when it serves its first request, so a change made before then (for example in `onInit` at boot) cannot be cleared and only logs a warning; it shows up after `revalidate` runs out. Changes the hooks cannot reach stay cached until `revalidate` runs out, which is why it defaults to 60 seconds: direct database writes, and changes made from another process or server instance (the Payload CLI, a seed script, a second app instance with its own in-memory cache). Set `revalidate: false` only if every change goes through Payload in the same process, or call `revalidateTag('payload-feature-flags')` yourself. Outside a Next.js server the Next.js cache is skipped and lookups read the database.
+
+For another store (Redis, in-memory, ...) pass an object with `wrap(key, load)` and `invalidate()`; the `FeatureFlagsCache` type and `createNextCache()` are exported from the main entry point.
 
 ### Client-Side Caching
 
