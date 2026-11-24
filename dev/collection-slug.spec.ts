@@ -31,6 +31,15 @@ describe('config.custom collection slug', () => {
     })
   })
 
+  test('the plugin merges into an existing entry under the same key', () => {
+    const config = payloadFeatureFlags({ collectionOverrides: { slug: 'flags' } })({
+      collections: [],
+      custom: { [FEATURE_FLAGS_CUSTOM_KEY]: { other: 'kept', collectionSlug: 'stale' } },
+    } as unknown as Config)
+
+    expect(config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]).toEqual({ other: 'kept', collectionSlug: 'flags' })
+  })
+
   test('the plugin records the slug when it is disabled', () => {
     const config = payloadFeatureFlags({ disabled: true, collectionOverrides: { slug: 'flags' } })({
       collections: [],

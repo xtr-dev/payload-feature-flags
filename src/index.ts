@@ -10,14 +10,17 @@ export type CollectionOverrides = Partial<
 export type { PayloadID, FeatureFlag } from './types/index.js'
 
 /**
- * Key under `config.custom` where the plugin records its own settings, so the
- * server helpers can find the feature flags collection without guessing.
+ * Key under `config.custom` where the plugin records its own settings for the
+ * server helpers. Root `config.custom` is server-only in Payload, so nothing
+ * stored here reaches the admin client.
  */
 export const FEATURE_FLAGS_CUSTOM_KEY = 'payloadFeatureFlags'
 
 export type FeatureFlagsCustomConfig = {
   /** Slug of the collection the plugin created for feature flags. */
   collectionSlug: string
+  /** Other plugin settings stored under the same key (kept when merging). */
+  [key: string]: unknown
 }
 
 export type PayloadFeatureFlagsConfig = {
@@ -205,7 +208,12 @@ export const payloadFeatureFlags =
     // searching the collections for one that looks like a feature flags
     // collection. Set before the disabled check because the collection (and
     // the helpers that read it) stay available when the plugin is disabled.
-    const customConfig: FeatureFlagsCustomConfig = { collectionSlug }
+    // Merged into any existing entry so other plugin settings stored under
+    // the same key are kept.
+    const customConfig: FeatureFlagsCustomConfig = {
+      ...config.custom?.[FEATURE_FLAGS_CUSTOM_KEY],
+      collectionSlug,
+    }
     config.custom = {
       ...config.custom,
       [FEATURE_FLAGS_CUSTOM_KEY]: customConfig,
