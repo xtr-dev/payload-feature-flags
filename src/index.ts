@@ -1,5 +1,6 @@
 import type { Config, CollectionConfig, Field } from 'payload'
 
+import { createPublicFlagsEndpoint } from './endpoints/publicFlags.js'
 import { resolveCacheOption, type FeatureFlagsCache, type NextCacheOptions } from './cache.js'
 
 export type CollectionOverrides = Partial<
@@ -9,6 +10,7 @@ export type CollectionOverrides = Partial<
 }
 
 // Export shared types for users of the plugin
+export type { PublicFeatureFlag, PublicFeatureFlagsResponse } from './endpoints/publicFlags.js'
 export { createNextCache, DEFAULT_CACHE_TAG } from './cache.js'
 export type { FeatureFlagsCache, NextCacheOptions } from './cache.js'
 export type { PayloadID, FeatureFlag } from './types/index.js'
@@ -60,6 +62,15 @@ export type PayloadFeatureFlagsConfig = {
    */
   enableCustomListView?: boolean
   /**
+   * Add a public `GET /api/<collection>/evaluate?names=a,b&userId=u` endpoint
+   * that returns only `{ name, enabled }` (plus the variant and rollout result
+   * for `userId`) for the named flags. The client hooks use it when called
+   * with `source: 'public'`, so the collection's `read` access can stay
+   * closed to visitors.
+   * @default false
+   */
+  publicEndpoint?: boolean
+  /**
    * Cache the RSC helpers' lookups across requests. The plugin clears the
    * cache from the collection's `afterChange` and `afterDelete` hooks.
    * - `true`: Next.js `unstable_cache` tagged `payload-feature-flags`,
@@ -81,6 +92,7 @@ export const payloadFeatureFlags =
       enableRollouts = true,
       enableVariants = true,
       enableCustomListView = false,
+      publicEndpoint = false,
       cache: cacheOption,
       collectionOverrides,
     } = pluginOptions
@@ -195,7 +207,22 @@ export const payloadFeatureFlags =
     // merged key by key rather than spread wholesale: a blanket spread of the
     // user's admin object (whether here or via otherOverrides below) replaces the
     // components key and silently discards enableCustomListView.
-    const { fields: _fieldsOverride, admin: adminOverride, ...otherOverrides } = collectionOverrides || {}
+    const {
+      fields: _fieldsOverride,
+      admin: adminOverride,
+      endpoints: endpointsOverride,
+      ...otherOverrides
+    } = collectionOverrides || {}
+
+    // `endpoints: false` in the overrides turns off custom endpoints for the
+    // collection, so the public endpoint is not added in that case either.
+    const endpoints: CollectionConfig['endpoints'] =
+      endpointsOverride === false
+        ? false
+        : [
+            ...(endpointsOverride || []),
+            ...(publicEndpoint && !disabled ? [createPublicFlagsEndpoint(collectionSlug)] : []),
+          ]
 
     // With a cache, any flag change has to clear it, so the invalidation hooks
     // run after the host's own afterChange / afterDelete hooks.
@@ -241,6 +268,7 @@ export const payloadFeatureFlags =
         } : adminOverride?.components || {},
       },
       fields,
+      endpoints,
       // Apply any other collection overrides
       ...otherOverrides,
       ...(hooks ? { hooks } : {}),

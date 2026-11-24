@@ -131,6 +131,10 @@ export default buildConfig({
       cache: true,
       defaultValue: false,
 
+      // Lets the client hooks read flags with `source: 'public'` while the
+      // collection's read access below stays limited to logged-in users
+      publicEndpoint: true,
+
       // Custom collection configuration
       collectionOverrides: {
         admin: {

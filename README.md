@@ -96,6 +96,14 @@ export type PayloadFeatureFlagsConfig = {
   enableCustomListView?: boolean
 
   /**
+   * Add a public GET /api/<collection>/evaluate endpoint that returns only
+   * { name, enabled } (plus variant and rollout for a userId) for named flags.
+   * Used by the client hooks with `source: 'public'`.
+   * @default false
+   */
+  publicEndpoint?: boolean
+
+  /**
    * Cache the RSC helpers across requests, cleared automatically when a flag
    * is changed or deleted. true = Next.js unstable_cache with the tag
    * 'payload-feature-flags', refreshed at least every 60 seconds; { tag?, revalidate? } = the same with your own
@@ -232,6 +240,28 @@ app.use('/api/feature-flags', featureFlagLimiter)
 ```
 
 **Important:** The plugin uses Payload's native REST API for the collection, which respects all access control rules.
+
+### Public Flags Endpoint (keep `read` closed)
+
+By default the client hooks read Payload's REST API for the collection, so visitors need `read` access to the whole collection, including disabled flags, metadata, variants and rollout settings. To keep `read` closed, turn on the public endpoint and call the hooks with `source: 'public'`:
+
+```typescript
+payloadFeatureFlags({
+  publicEndpoint: true,
+  collectionOverrides: {
+    access: { read: ({ req: { user } }) => !!user },
+  },
+})
+```
+
+```typescript
+const { isEnabled } = useFeatureFlag('new-homepage', { source: 'public' })
+const { variant } = useVariantSelection('checkout-test', userId, { source: 'public' })
+```
+
+`GET /api/<collection>/evaluate?names=a,b&userId=u` returns `{ flags: { [name]: { name, enabled, variant?, inRollout? } } }` for every name you pass (at most 100). A name with no flag is answered as `enabled: false`, so the endpoint does not reveal which flags exist, and it never lists all flags. `variant` and `inRollout` are resolved on the server (same bucketing as the RSC helpers) and only included when `userId` is sent. With `source: 'public'` the hooks' `flag` holds only `name` and `enabled`, and a missing flag shows as disabled instead of an error.
+
+The endpoint is public by design: anyone can ask for the on/off state of a flag they can name, and the variant and rollout result for any `userId` they choose. Don't put anything in flag names, or base rollouts or variants on user IDs, that must stay secret. Only turn on `publicEndpoint` if that is acceptable.
 
 ## Usage
 
@@ -654,7 +684,7 @@ import {
 - `useRolloutCheck(flagName, userId, options?)` - Check whether a user is in a flag's rollout, returning `isInRollout`, `flag`, `loading`, and `error`.
 - `withFeatureFlag(flagName, FallbackComponent?, options?)(WrappedComponent)` - Higher-order component that renders `WrappedComponent` when the flag is enabled, and `FallbackComponent` when it is not.
 - `FeatureFlag` - Type describing a flag's name, enabled state, rollout percentage, variants, and metadata.
-- `FeatureFlagOptions` - Optional client configuration: `serverURL`, `apiPath`, and `collectionSlug`.
+- `FeatureFlagOptions` - Optional client configuration: `serverURL`, `apiPath`, `collectionSlug`, and `source` (`'collection'`, the default, or `'public'` to use the public flags endpoint).
 
 ### Server Component Hooks (RSC Export)
 
