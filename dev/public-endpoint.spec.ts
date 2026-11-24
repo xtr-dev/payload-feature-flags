@@ -73,7 +73,7 @@ describe('publicEndpoint option', () => {
 describe('public endpoint handler', () => {
   const handler = findEndpoint(applyPlugin({ publicEndpoint: true }))!.handler
 
-  test('returns only name and enabled for the named flags, bypassing collection access', async () => {
+  test('returns only name and enabled for every named flag, bypassing collection access', async () => {
     const { req, find } = makeReq('?names=new-homepage,disabled-flag,missing')
     const response = await handler(req)
 
@@ -82,6 +82,8 @@ describe('public endpoint handler', () => {
       flags: {
         'new-homepage': { name: 'new-homepage', enabled: true },
         'disabled-flag': { name: 'disabled-flag', enabled: false },
+        // A missing flag is answered like a disabled one, so existence cannot be probed
+        missing: { name: 'missing', enabled: false },
       },
     })
     expect(find).toHaveBeenCalledWith(

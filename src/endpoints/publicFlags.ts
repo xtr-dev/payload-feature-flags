@@ -88,7 +88,8 @@ function readUserId(req: PayloadRequest): string | undefined {
  * endpoint used by the client hooks. It reads the collection with
  * `overrideAccess`, so the collection's own `read` access can stay closed to
  * visitors. Callers must name the flags they want: the endpoint never lists
- * every flag, and unknown names are left out of the response.
+ * every flag. Every requested name is answered, and a name with no flag gets
+ * `enabled: false`, so the response does not reveal which flags exist.
  */
 export function createPublicFlagsEndpoint(collectionSlug: string): Endpoint {
   return {
@@ -118,17 +119,23 @@ export function createPublicFlagsEndpoint(collectionSlug: string): Endpoint {
           req,
         })
 
-        const flags: Record<string, PublicFeatureFlag> = {}
+        const docsByName = new Map<string, Record<string, unknown>>()
         for (const doc of result.docs as Array<Record<string, unknown>>) {
-          const name = doc.name
-          if (typeof name !== 'string') {
-            continue
+          if (typeof doc.name === 'string') {
+            docsByName.set(doc.name, doc)
           }
-          const enabled = doc.enabled === true
+        }
+
+        // Answer every requested name the same way whether or not the flag
+        // exists: a missing flag looks exactly like a disabled one.
+        const flags: Record<string, PublicFeatureFlag> = {}
+        for (const name of names) {
+          const doc = docsByName.get(name)
+          const enabled = doc?.enabled === true
           const flag: PublicFeatureFlag = { name, enabled }
           if (userId !== undefined) {
-            flag.variant = resolveVariant(userId, enabled, doc.variants)
-            flag.inRollout = resolveRollout(userId, enabled, doc.rolloutPercentage)
+            flag.variant = resolveVariant(userId, enabled, doc?.variants)
+            flag.inRollout = resolveRollout(userId, enabled, doc?.rolloutPercentage)
           }
           flags[name] = flag
         }

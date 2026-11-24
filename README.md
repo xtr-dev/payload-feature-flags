@@ -250,7 +250,9 @@ const { isEnabled } = useFeatureFlag('new-homepage', { source: 'public' })
 const { variant } = useVariantSelection('checkout-test', userId, { source: 'public' })
 ```
 
-`GET /api/<collection>/evaluate?names=a,b&userId=u` returns `{ flags: { [name]: { name, enabled, variant?, inRollout? } } }` for the named flags that exist. `variant` and `inRollout` are resolved on the server (same bucketing as the RSC helpers) and only included when `userId` is sent. The endpoint never lists all flags; it answers only for the names you pass (at most 100). With `source: 'public'` the hooks' `flag` holds only `name` and `enabled`.
+`GET /api/<collection>/evaluate?names=a,b&userId=u` returns `{ flags: { [name]: { name, enabled, variant?, inRollout? } } }` for every name you pass (at most 100). A name with no flag is answered as `enabled: false`, so the endpoint does not reveal which flags exist, and it never lists all flags. `variant` and `inRollout` are resolved on the server (same bucketing as the RSC helpers) and only included when `userId` is sent. With `source: 'public'` the hooks' `flag` holds only `name` and `enabled`, and a missing flag shows as disabled instead of an error.
+
+The endpoint is public by design: anyone can ask for the on/off state of a flag they can name, and the variant and rollout result for any `userId` they choose. Don't put anything in flag names, or base rollouts or variants on user IDs, that must stay secret. Only turn on `publicEndpoint` if that is acceptable.
 
 ## Usage
 
