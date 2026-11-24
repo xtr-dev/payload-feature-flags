@@ -128,7 +128,9 @@ export function createPublicFlagsEndpoint(collectionSlug: string): Endpoint {
 
         // Answer every requested name the same way whether or not the flag
         // exists: a missing flag looks exactly like a disabled one.
-        const flags: Record<string, PublicFeatureFlag> = {}
+        // Null prototype, so a requested name such as `__proto__` is stored as
+        // an ordinary key instead of hitting Object.prototype's setter.
+        const flags: Record<string, PublicFeatureFlag> = Object.create(null)
         for (const name of names) {
           const doc = docsByName.get(name)
           const enabled = doc?.enabled === true

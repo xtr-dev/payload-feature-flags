@@ -120,6 +120,15 @@ describe('public endpoint handler', () => {
     }
   })
 
+  test('answers names that clash with Object.prototype', async () => {
+    const { req } = makeReq('?names=__proto__,constructor')
+    const body = await (await handler(req)).json()
+
+    expect(Object.keys(body.flags)).toEqual(['__proto__', 'constructor'])
+    expect(body.flags['__proto__']).toEqual({ name: '__proto__', enabled: false })
+    expect(body.flags.constructor).toEqual({ name: 'constructor', enabled: false })
+  })
+
   test('rejects a request without names', async () => {
     const { req, find } = makeReq('')
     const response = await handler(req)
