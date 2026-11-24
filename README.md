@@ -94,6 +94,15 @@ export type PayloadFeatureFlagsConfig = {
    * @default false
    */
   enableCustomListView?: boolean
+
+  /**
+   * Cache the RSC helpers across requests, cleared automatically when a flag
+   * is changed or deleted. true = Next.js unstable_cache with the tag
+   * 'payload-feature-flags'; { tag?, revalidate? } = the same with your own
+   * settings; or pass your own FeatureFlagsCache.
+   * @default false
+   */
+  cache?: boolean | NextCacheOptions | FeatureFlagsCache
   
   /**
    * Override collection configuration
@@ -502,6 +511,21 @@ if (flag?.enabled && flag.variants) {
 ```
 
 ## Performance Considerations
+
+### Server-Side Caching Across Requests
+
+The RSC helpers use React `cache()`, which only dedupes calls within one request, so by default every request reads the database. Turn on the `cache` option to keep lookups between requests:
+
+```typescript
+payloadFeatureFlags({
+  cache: true, // Next.js unstable_cache, tag 'payload-feature-flags'
+  // or: cache: { tag: 'my-flags', revalidate: 300 },
+})
+```
+
+The plugin adds `afterChange` and `afterDelete` hooks to the flags collection (after any hooks from `collectionOverrides`) that clear the cache, so a changed flag shows on the next request. Changes that bypass Payload hooks (direct database writes) stay cached until `revalidate` runs out or you call `revalidateTag('payload-feature-flags')` yourself. Outside a Next.js server the Next.js cache is skipped and lookups read the database.
+
+For another store (Redis, in-memory, ...) pass an object with `wrap(key, load)` and `invalidate()`; the `FeatureFlagsCache` type and `createNextCache()` are exported from the main entry point.
 
 ### Client-Side Caching
 
