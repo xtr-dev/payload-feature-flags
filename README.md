@@ -235,6 +235,7 @@ Once installed, the plugin automatically:
 3. **Adds a custom dashboard view** - Enhanced UI for managing flags at `/admin/feature-flags-overview`
 4. **Exposes REST API endpoints** - Simple endpoints for checking flag states
 5. **Keeps your data clean** - No modifications to your existing collections
+6. **Records its collection slug** - Under `config.custom.payloadFeatureFlags.collectionSlug`, which the server helpers read to find the flags collection (configs without it fall back to detecting the collection by its fields)
 
 ### Admin Interface
 
