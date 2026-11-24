@@ -1,5 +1,7 @@
 import type { Config, CollectionConfig, Field } from 'payload'
 
+import { createPublicFlagsEndpoint } from './endpoints/publicFlags.js'
+
 export type CollectionOverrides = Partial<
   Omit<CollectionConfig, 'fields'>
 > & {
@@ -7,6 +9,7 @@ export type CollectionOverrides = Partial<
 }
 
 // Export shared types for users of the plugin
+export type { PublicFeatureFlag, PublicFeatureFlagsResponse } from './endpoints/publicFlags.js'
 export type { PayloadID, FeatureFlag } from './types/index.js'
 
 export type PayloadFeatureFlagsConfig = {
@@ -39,6 +42,15 @@ export type PayloadFeatureFlagsConfig = {
    * @default false
    */
   enableCustomListView?: boolean
+  /**
+   * Add a public `GET /api/<collection>/evaluate?names=a,b&userId=u` endpoint
+   * that returns only `{ name, enabled }` (plus the variant and rollout result
+   * for `userId`) for the named flags. The client hooks use it when called
+   * with `source: 'public'`, so the collection's `read` access can stay
+   * closed to visitors.
+   * @default false
+   */
+  publicEndpoint?: boolean
 }
 
 export const payloadFeatureFlags =
@@ -50,6 +62,7 @@ export const payloadFeatureFlags =
       enableRollouts = true,
       enableVariants = true,
       enableCustomListView = false,
+      publicEndpoint = false,
       collectionOverrides,
     } = pluginOptions
 
@@ -163,7 +176,22 @@ export const payloadFeatureFlags =
     // merged key by key rather than spread wholesale: a blanket spread of the
     // user's admin object (whether here or via otherOverrides below) replaces the
     // components key and silently discards enableCustomListView.
-    const { fields: _fieldsOverride, admin: adminOverride, ...otherOverrides } = collectionOverrides || {}
+    const {
+      fields: _fieldsOverride,
+      admin: adminOverride,
+      endpoints: endpointsOverride,
+      ...otherOverrides
+    } = collectionOverrides || {}
+
+    // `endpoints: false` in the overrides turns off custom endpoints for the
+    // collection, so the public endpoint is not added in that case either.
+    const endpoints: CollectionConfig['endpoints'] =
+      endpointsOverride === false
+        ? false
+        : [
+            ...(endpointsOverride || []),
+            ...(publicEndpoint && !disabled ? [createPublicFlagsEndpoint(collectionSlug)] : []),
+          ]
 
     // Create the feature flags collection with overrides
     const featureFlagsCollection: CollectionConfig = {
@@ -184,6 +212,7 @@ export const payloadFeatureFlags =
         } : adminOverride?.components || {},
       },
       fields,
+      endpoints,
       // Apply any other collection overrides
       ...otherOverrides,
     }
