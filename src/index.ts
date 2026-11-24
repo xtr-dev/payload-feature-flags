@@ -1,5 +1,7 @@
 import type { Config, CollectionConfig, Field } from 'payload'
 
+import { resolveCacheOption, type FeatureFlagsCache, type NextCacheOptions } from './cache.js'
+
 export type CollectionOverrides = Partial<
   Omit<CollectionConfig, 'fields'>
 > & {
@@ -7,6 +9,8 @@ export type CollectionOverrides = Partial<
 }
 
 // Export shared types for users of the plugin
+export { createNextCache, DEFAULT_CACHE_TAG } from './cache.js'
+export type { FeatureFlagsCache, NextCacheOptions } from './cache.js'
 export type { PayloadID, FeatureFlag } from './types/index.js'
 
 /**
@@ -19,6 +23,8 @@ export const FEATURE_FLAGS_CUSTOM_KEY = 'payloadFeatureFlags'
 export type FeatureFlagsCustomConfig = {
   /** Slug of the collection the plugin created for feature flags. */
   collectionSlug: string
+  /** Cross-request cache for the RSC helpers, set by the `cache` option. */
+  cache?: FeatureFlagsCache
   /** Other plugin settings stored under the same key (kept when merging). */
   [key: string]: unknown
 }
@@ -53,6 +59,17 @@ export type PayloadFeatureFlagsConfig = {
    * @default false
    */
   enableCustomListView?: boolean
+  /**
+   * Cache the RSC helpers' lookups across requests. The plugin clears the
+   * cache from the collection's `afterChange` and `afterDelete` hooks.
+   * - `true`: Next.js `unstable_cache` tagged `payload-feature-flags`,
+   *   refreshed at least every 60 seconds.
+   * - `{ tag?, revalidate? }`: the same, with your own tag or time limit.
+   * - A `FeatureFlagsCache` object: your own cache (Redis, in-memory, ...).
+   * Off by default: without it every request reads the database.
+   * @default false
+   */
+  cache?: boolean | NextCacheOptions | FeatureFlagsCache
 }
 
 export const payloadFeatureFlags =
@@ -64,6 +81,7 @@ export const payloadFeatureFlags =
       enableRollouts = true,
       enableVariants = true,
       enableCustomListView = false,
+      cache: cacheOption,
       collectionOverrides,
     } = pluginOptions
 
@@ -179,6 +197,31 @@ export const payloadFeatureFlags =
     // components key and silently discards enableCustomListView.
     const { fields: _fieldsOverride, admin: adminOverride, ...otherOverrides } = collectionOverrides || {}
 
+    // With a cache, any flag change has to clear it, so the invalidation hooks
+    // run after the host's own afterChange / afterDelete hooks.
+    const cache = resolveCacheOption(cacheOption)
+    const invalidateCache = async () => {
+      try {
+        await cache?.invalidate()
+      } catch (error) {
+        // Next.js control-flow errors (DynamicServerError and the like) carry
+        // a string `digest` and must reach Next.js, so they are rethrown.
+        // Other failures only mean the cache is not cleared until it
+        // revalidates, which must not fail the flag change itself.
+        if (error && typeof error === 'object' && typeof (error as { digest?: unknown }).digest === 'string') {
+          throw error
+        }
+        console.error('Failed to clear the feature flags cache:', error)
+      }
+    }
+    const hooks: CollectionConfig['hooks'] = cache
+      ? {
+          ...otherOverrides.hooks,
+          afterChange: [...(otherOverrides.hooks?.afterChange || []), invalidateCache],
+          afterDelete: [...(otherOverrides.hooks?.afterDelete || []), invalidateCache],
+        }
+      : otherOverrides.hooks
+
     // Create the feature flags collection with overrides
     const featureFlagsCollection: CollectionConfig = {
       slug: collectionSlug,
@@ -200,6 +243,7 @@ export const payloadFeatureFlags =
       fields,
       // Apply any other collection overrides
       ...otherOverrides,
+      ...(hooks ? { hooks } : {}),
     }
 
     config.collections.push(featureFlagsCollection)
@@ -217,6 +261,21 @@ export const payloadFeatureFlags =
     config.custom = {
       ...config.custom,
       [FEATURE_FLAGS_CUSTOM_KEY]: customConfig,
+    }
+
+    // The server helpers read the cache from here. Set before the disabled
+    // check because the collection and the helpers stay usable when the plugin
+    // is disabled, and the invalidation hooks above are added either way.
+    if (cache) {
+      const withCache: FeatureFlagsCustomConfig = {
+        ...config.custom[FEATURE_FLAGS_CUSTOM_KEY],
+        collectionSlug,
+        cache,
+      }
+      config.custom = {
+        ...config.custom,
+        [FEATURE_FLAGS_CUSTOM_KEY]: withCache,
+      }
     }
 
     /**

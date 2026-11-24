@@ -127,6 +127,8 @@ export default buildConfig({
       // Enable all features
       enableRollouts: true,
       enableVariants: true,
+      // Cache the RSC helpers across requests; cleared when a flag changes
+      cache: true,
       defaultValue: false,
 
       // Custom collection configuration
