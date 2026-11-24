@@ -53,7 +53,8 @@ export type PayloadFeatureFlagsConfig = {
   /**
    * Cache the RSC helpers' lookups across requests. The plugin clears the
    * cache from the collection's `afterChange` and `afterDelete` hooks.
-   * - `true`: Next.js `unstable_cache` tagged `payload-feature-flags`.
+   * - `true`: Next.js `unstable_cache` tagged `payload-feature-flags`,
+   *   refreshed at least every 60 seconds.
    * - `{ tag?, revalidate? }`: the same, with your own tag or time limit.
    * - A `FeatureFlagsCache` object: your own cache (Redis, in-memory, ...).
    * Off by default: without it every request reads the database.

@@ -1,6 +1,6 @@
 import type { CollectionAfterChangeHook, Config, Payload } from 'payload'
 
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import type { FeatureFlagsCache } from '../src/cache.js'
 
@@ -149,5 +149,36 @@ describe('createNextCache outside a Next.js server', () => {
       }),
     ).rejects.toThrow('boom')
     await expect(Promise.resolve(cache.invalidate())).resolves.toBeUndefined()
+  })
+})
+
+describe('createNextCache invalidation without a request context', () => {
+  const globalWithCache = globalThis as { __incrementalCache?: unknown }
+
+  afterEach(() => {
+    delete globalWithCache.__incrementalCache
+    vi.restoreAllMocks()
+  })
+
+  test('clears the tag on the global incremental cache when revalidateTag throws', async () => {
+    // Outside a request (a Payload job, onInit), next's revalidateTag throws
+    // "static generation store missing"; this test process has no request either.
+    const revalidateTag = vi.fn(async () => {})
+    globalWithCache.__incrementalCache = { revalidateTag }
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await createNextCache({ tag: 'my-flags' }).invalidate()
+
+    expect(revalidateTag).toHaveBeenCalledWith('my-flags')
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  test('warns instead of failing silently when there is no cache to clear', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await createNextCache().invalidate()
+
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0][0])).toContain('payload-feature-flags')
   })
 })

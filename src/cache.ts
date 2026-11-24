@@ -25,13 +25,28 @@ export type NextCacheOptions = {
   tag?: string
   /**
    * Seconds before a cached lookup is refreshed even without a change, or
-   * `false` to keep it until the tag is revalidated.
-   * @default false
+   * `false` to keep it until the tag is revalidated. The finite default is a
+   * safety net for changes the plugin cannot clear right away, such as a
+   * write from another server instance or a direct database edit.
+   * @default 60
    */
   revalidate?: number | false
 }
 
 export const DEFAULT_CACHE_TAG = 'payload-feature-flags'
+
+/** Default `revalidate` for `createNextCache`, in seconds. */
+export const DEFAULT_CACHE_REVALIDATE = 60
+
+/**
+ * The incremental cache a Next.js server registers on `globalThis`. It is what
+ * `unstable_cache` falls back to outside a request, so clearing a tag on it
+ * also works outside a request (Payload jobs, `onInit`, local API scripts run
+ * inside the Next.js process).
+ */
+type GlobalIncrementalCache = {
+  revalidateTag?: (tags: string | string[]) => Promise<void> | void
+}
 
 type NextCacheModule = typeof import('next/cache.js')
 
@@ -54,7 +69,7 @@ function loadNextCache(): Promise<NextCacheModule | null> {
  */
 export function createNextCache(options: NextCacheOptions = {}): FeatureFlagsCache {
   const tag = options.tag ?? DEFAULT_CACHE_TAG
-  const revalidate = options.revalidate ?? false
+  const revalidate = options.revalidate ?? DEFAULT_CACHE_REVALIDATE
 
   return {
     async wrap<T>(key: string[], load: () => Promise<T>): Promise<T> {
@@ -91,10 +106,23 @@ export function createNextCache(options: NextCacheOptions = {}): FeatureFlagsCac
       }
       try {
         next.revalidateTag(tag)
-      } catch {
-        // revalidateTag throws outside a Next.js server, for example when a
-        // flag is changed from a Payload script. There is no Next.js cache to
-        // clear there.
+        return
+      } catch (error) {
+        // revalidateTag throws without a request context ("static generation
+        // store missing"), for example when a flag changes from a Payload job,
+        // onInit or a script. Clear the tag on the global incremental cache
+        // instead, which is the same cache unstable_cache uses there.
+        const incrementalCache = (globalThis as { __incrementalCache?: GlobalIncrementalCache })
+          .__incrementalCache
+        if (typeof incrementalCache?.revalidateTag === 'function') {
+          await incrementalCache.revalidateTag(tag)
+          return
+        }
+        console.warn(
+          `[payload-feature-flags] Could not clear the feature flags cache (tag "${tag}"); ` +
+            `cached flags refresh after the revalidate interval instead.`,
+          error,
+        )
       }
     },
   }
