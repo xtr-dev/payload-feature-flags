@@ -61,7 +61,8 @@ describe('cache option wiring', () => {
     const config = applyPlugin({ collectionOverrides: { hooks: { afterChange: [hostHook] } } })
 
     expect(flagsCollection(config).hooks).toEqual({ afterChange: [hostHook] })
-    expect(config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]).toBeUndefined()
+    // Only the collection slug is recorded; no cache entry is added
+    expect(config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]).toEqual({ collectionSlug: 'feature-flags' })
   })
 
   test('a custom cache is stored in config.custom and cleared after the host hooks', () => {
@@ -78,7 +79,10 @@ describe('cache option wiring', () => {
       { custom: { host: true } },
     )
 
-    expect(config.custom).toEqual({ host: true, [FEATURE_FLAGS_CUSTOM_KEY]: { cache } })
+    expect(config.custom).toEqual({
+      host: true,
+      [FEATURE_FLAGS_CUSTOM_KEY]: { collectionSlug: 'feature-flags', cache },
+    })
 
     const hooks = flagsCollection(config).hooks!
     expect(hooks.beforeChange).toEqual([hostBeforeChange])

@@ -64,10 +64,24 @@ function toFeatureFlag(doc: Record<string, unknown>): FeatureFlag {
   }
 }
 
-// Helper to get the collection slug from config
-function getCollectionSlug(payload: Payload): string {
+// Must match FEATURE_FLAGS_CUSTOM_KEY in src/index.ts. Duplicated rather than
+// imported so the RSC entry point does not pull in the plugin config module.
+const FEATURE_FLAGS_CUSTOM_KEY = 'payloadFeatureFlags'
+
+/**
+ * Resolve the feature flags collection slug. The plugin records the slug it
+ * created in `config.custom.payloadFeatureFlags.collectionSlug`; that value is
+ * used when present. Configs built by older plugin versions lack it, so the
+ * helper falls back to finding a collection with a unique text `name` field
+ * and a checkbox `enabled` field, and finally to `feature-flags`.
+ */
+export function getCollectionSlug(payload: Payload): string {
   try {
-    // Look for the feature flags collection - it should have a 'name' field with unique constraint
+    const configured = payload.config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]?.collectionSlug
+    if (typeof configured === 'string' && configured.length > 0) {
+      return configured
+    }
+
     const collection = payload.config.collections?.find(col =>
       col.fields.some((field: any) =>
         field.name === 'name' &&
@@ -81,10 +95,6 @@ function getCollectionSlug(payload: Payload): string {
     return 'feature-flags'
   }
 }
-
-// Must match FEATURE_FLAGS_CUSTOM_KEY in src/index.ts. Duplicated rather than
-// imported so the RSC entry point does not pull in the plugin config module.
-const FEATURE_FLAGS_CUSTOM_KEY = 'payloadFeatureFlags'
 
 function getCrossRequestCache(payload: Payload): FeatureFlagsCache | undefined {
   const configured = payload.config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]?.cache

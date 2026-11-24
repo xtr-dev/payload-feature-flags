@@ -20,6 +20,15 @@ export type { PayloadID, FeatureFlag } from './types/index.js'
  */
 export const FEATURE_FLAGS_CUSTOM_KEY = 'payloadFeatureFlags'
 
+export type FeatureFlagsCustomConfig = {
+  /** Slug of the collection the plugin created for feature flags. */
+  collectionSlug: string
+  /** Cross-request cache for the RSC helpers, set by the `cache` option. */
+  cache?: FeatureFlagsCache
+  /** Other plugin settings stored under the same key (kept when merging). */
+  [key: string]: unknown
+}
+
 export type PayloadFeatureFlagsConfig = {
   /**
    * Enable/disable the plugin
@@ -239,16 +248,33 @@ export const payloadFeatureFlags =
 
     config.collections.push(featureFlagsCollection)
 
+    // Record the configured slug so the server helpers read it instead of
+    // searching the collections for one that looks like a feature flags
+    // collection. Set before the disabled check because the collection (and
+    // the helpers that read it) stay available when the plugin is disabled.
+    // Merged into any existing entry so other plugin settings stored under
+    // the same key are kept.
+    const customConfig: FeatureFlagsCustomConfig = {
+      ...config.custom?.[FEATURE_FLAGS_CUSTOM_KEY],
+      collectionSlug,
+    }
+    config.custom = {
+      ...config.custom,
+      [FEATURE_FLAGS_CUSTOM_KEY]: customConfig,
+    }
+
     // The server helpers read the cache from here. Set before the disabled
     // check because the collection and the helpers stay usable when the plugin
     // is disabled, and the invalidation hooks above are added either way.
     if (cache) {
+      const withCache: FeatureFlagsCustomConfig = {
+        ...config.custom[FEATURE_FLAGS_CUSTOM_KEY],
+        collectionSlug,
+        cache,
+      }
       config.custom = {
         ...config.custom,
-        [FEATURE_FLAGS_CUSTOM_KEY]: {
-          ...config.custom?.[FEATURE_FLAGS_CUSTOM_KEY],
-          cache,
-        },
+        [FEATURE_FLAGS_CUSTOM_KEY]: withCache,
       }
     }
 
