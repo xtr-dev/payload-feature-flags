@@ -182,3 +182,45 @@ describe('createNextCache invalidation without a request context', () => {
     expect(String(warn.mock.calls[0][0])).toContain('payload-feature-flags')
   })
 })
+
+describe('createNextCache invalidation error handling', () => {
+  afterEach(() => {
+    delete (globalThis as { __incrementalCache?: unknown }).__incrementalCache
+    vi.restoreAllMocks()
+  })
+
+  test('rethrows errors other than a missing request context', async () => {
+    const fallback = vi.fn()
+    ;(globalThis as { __incrementalCache?: unknown }).__incrementalCache = { revalidateTag: fallback }
+    const dynamicError = Object.assign(new Error('Dynamic server usage'), { digest: 'DYNAMIC_SERVER_USAGE' })
+    // A fresh copy of src/cache.js that sees a mocked next/cache.js
+    vi.resetModules()
+    vi.doMock('next/cache.js', () => ({
+      revalidateTag: () => {
+        throw dynamicError
+      },
+      unstable_cache: vi.fn(),
+    }))
+    const { createNextCache: createMockedNextCache } = await import('../src/cache.js')
+
+    await expect(createMockedNextCache().invalidate()).rejects.toBe(dynamicError)
+    expect(fallback).not.toHaveBeenCalled()
+    vi.doUnmock('next/cache.js')
+  })
+
+  test("the plugin's hook rethrows Next.js control-flow errors and logs others", async () => {
+    const dynamicError = Object.assign(new Error('Dynamic server usage'), { digest: 'DYNAMIC_SERVER_USAGE' })
+    const invalidate = vi.fn<() => Promise<void>>()
+    const config = applyPlugin({ cache: { wrap: (_key, load) => load(), invalidate } })
+    const afterDelete = flagsCollection(config).hooks!.afterDelete!.at(-1)!
+    const args = {} as Parameters<typeof afterDelete>[0]
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    invalidate.mockRejectedValueOnce(dynamicError)
+    await expect(afterDelete(args)).rejects.toBe(dynamicError)
+
+    invalidate.mockRejectedValueOnce(new Error('redis down'))
+    await expect(afterDelete(args)).resolves.toBeUndefined()
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+  })
+})

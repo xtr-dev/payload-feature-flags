@@ -63,6 +63,16 @@ function loadNextCache(): Promise<NextCacheModule | null> {
 }
 
 /**
+ * True for the error next's `revalidateTag` throws when there is no request
+ * context ("Invariant: static generation store missing in revalidateTag ...").
+ * Other errors, such as Next's DynamicServerError during a render, are
+ * control flow that Next.js has to see, so they are rethrown.
+ */
+function isMissingRequestContextError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('static generation store missing')
+}
+
+/**
  * A `FeatureFlagsCache` backed by Next.js `unstable_cache`, tagged so the
  * plugin can clear it with `revalidateTag`. Outside a Next.js server (no
  * incremental cache available) lookups fall back to reading the database.
@@ -108,6 +118,9 @@ export function createNextCache(options: NextCacheOptions = {}): FeatureFlagsCac
         next.revalidateTag(tag)
         return
       } catch (error) {
+        if (!isMissingRequestContextError(error)) {
+          throw error
+        }
         // revalidateTag throws without a request context ("static generation
         // store missing"), for example when a flag changes from a Payload job,
         // onInit or a script. Clear the tag on the global incremental cache
@@ -118,6 +131,8 @@ export function createNextCache(options: NextCacheOptions = {}): FeatureFlagsCac
           await incrementalCache.revalidateTag(tag)
           return
         }
+        // No global cache yet: Next.js sets it when it serves its first
+        // request, so a change during boot (onInit) cannot be cleared here.
         console.warn(
           `[payload-feature-flags] Could not clear the feature flags cache (tag "${tag}"); ` +
             `cached flags refresh after the revalidate interval instead.`,

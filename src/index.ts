@@ -195,6 +195,13 @@ export const payloadFeatureFlags =
       try {
         await cache?.invalidate()
       } catch (error) {
+        // Next.js control-flow errors (DynamicServerError and the like) carry
+        // a string `digest` and must reach Next.js, so they are rethrown.
+        // Other failures only mean the cache is not cleared until it
+        // revalidates, which must not fail the flag change itself.
+        if (error && typeof error === 'object' && typeof (error as { digest?: unknown }).digest === 'string') {
+          throw error
+        }
         console.error('Failed to clear the feature flags cache:', error)
       }
     }
