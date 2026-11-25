@@ -3,6 +3,14 @@
   "version": "0.0.22",
   "description": "Feature flags plugin for Payload CMS - manage feature toggles, A/B tests, and gradual rollouts",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xtr-dev/payload-feature-flags.git"
+  },
+  "homepage": "https://github.com/xtr-dev/payload-feature-flags#readme",
+  "bugs": {
+    "url": "https://github.com/xtr-dev/payload-feature-flags/issues"
+  },
   "type": "module",
   "exports": {
     ".": {
