@@ -1,19 +1,10 @@
 'use client'
 import React, { useCallback, useEffect, useState, useRef } from 'react'
+import { FeatureFlag, toFeatureFlag } from '../utils/mappers.js'
 
 import { isUserInRolloutBucket, selectVariantForUser } from '../bucketing.js'
 
-export interface FeatureFlag {
-  name: string
-  enabled: boolean
-  rolloutPercentage?: number
-  variants?: Array<{
-    name: string
-    weight: number
-    metadata?: any
-  }>
-  metadata?: any
-}
+export type { FeatureFlag }
 
 export interface FeatureFlagOptions {
   serverURL?: string
@@ -23,11 +14,12 @@ export interface FeatureFlagOptions {
    * Where the hooks read flags from.
    * - `'collection'` (default): Payload's REST API for the collection. The
    *   collection's `read` access must allow the visitor, and the hooks get the
-   *   whole flag (rollout percentage, variants, metadata).
+   *   whole flag (description, rollout percentage, variants, tags, metadata).
    * - `'public'`: the plugin's public endpoint (enable it with the plugin's
    *   `publicEndpoint` option). It returns only the name and enabled state,
    *   with variant and rollout resolved on the server, so `read` can stay
-   *   closed.
+   *   closed. The hooks' `flag` then has no description, tags, variants,
+   *   rollout percentage or metadata: the endpoint keeps those private.
    */
   source?: 'collection' | 'public'
 }
@@ -162,13 +154,7 @@ export function useFeatureFlags(
       const fetchedFlagsMap = new Map<string, Partial<FeatureFlag>>()
       if (result.docs && Array.isArray(result.docs)) {
         result.docs.forEach((doc: any) => {
-          fetchedFlagsMap.set(doc.name, {
-            name: doc.name,
-            enabled: doc.enabled,
-            rolloutPercentage: doc.rolloutPercentage,
-            variants: doc.variants,
-            metadata: doc.metadata,
-          })
+          fetchedFlagsMap.set(doc.name, toFeatureFlag(doc))
         })
       }
 
@@ -277,13 +263,7 @@ function useSingleFeatureFlag(
 
       if (result.docs && result.docs.length > 0) {
         const doc = result.docs[0]
-        setFlag({
-          name: doc.name,
-          enabled: doc.enabled,
-          rolloutPercentage: doc.rolloutPercentage,
-          variants: doc.variants,
-          metadata: doc.metadata,
-        })
+        setFlag(toFeatureFlag(doc))
       } else {
         setFlag(null)
         setError(`Feature flag '${flagName}' not found`)

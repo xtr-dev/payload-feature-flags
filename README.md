@@ -259,7 +259,7 @@ const { isEnabled } = useFeatureFlag('new-homepage', { source: 'public' })
 const { variant } = useVariantSelection('checkout-test', userId, { source: 'public' })
 ```
 
-`GET /api/<collection>/evaluate?names=a,b&userId=u` returns `{ flags: { [name]: { name, enabled, variant?, inRollout? } } }` for every name you pass (at most 100). A name with no flag is answered as `enabled: false`, so the endpoint does not reveal which flags exist, and it never lists all flags. `variant` and `inRollout` are resolved on the server (same bucketing as the RSC helpers) and only included when `userId` is sent. With `source: 'public'` the hooks' `flag` holds only `name` and `enabled`, and a missing flag shows as disabled instead of an error.
+`GET /api/<collection>/evaluate?names=a,b&userId=u` returns `{ flags: { [name]: { name, enabled, variant?, inRollout? } } }` for every name you pass (at most 100). A name with no flag is answered as `enabled: false`, so the endpoint does not reveal which flags exist, and it never lists all flags. `variant` and `inRollout` are resolved on the server (same bucketing as the RSC helpers) and only included when `userId` is sent. With `source: 'public'` the hooks' `flag` holds only `name` and `enabled` (no description, tags, variants, rollout percentage or metadata), and a missing flag shows as disabled instead of an error.
 
 The endpoint is public by design: anyone can ask for the on/off state of a flag they can name, and the variant and rollout result for any `userId` they choose. Don't put anything in flag names, or base rollouts or variants on user IDs, that must stay secret. Only turn on `publicEndpoint` if that is acceptable.
 
@@ -652,7 +652,7 @@ import {
 - `useVariantSelection(flagName, userId, options?)` - Select a stable variant for a user, returning `variant`, `flag`, `loading`, and `error`.
 - `useRolloutCheck(flagName, userId, options?)` - Check whether a user is in a flag's rollout, returning `isInRollout`, `flag`, `loading`, and `error`.
 - `withFeatureFlag(flagName, FallbackComponent?, options?)(WrappedComponent)` - Higher-order component that renders `WrappedComponent` when the flag is enabled, and `FallbackComponent` when it is not.
-- `FeatureFlag` - Type describing a flag's name, enabled state, rollout percentage, variants, and metadata.
+- `FeatureFlag` - Type describing a flag's name, description, enabled state, rollout percentage, variants, tags, and metadata. With `source: 'public'` only `name` and `enabled` are filled in.
 - `FeatureFlagOptions` - Optional client configuration: `serverURL`, `apiPath`, `collectionSlug`, and `source` (`'collection'`, the default, or `'public'` to use the public flags endpoint).
 
 ### Server Component Hooks (RSC Export)
