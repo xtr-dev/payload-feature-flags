@@ -29,7 +29,7 @@ yarn add @xtr-dev/payload-feature-flags
 
 ## Requirements
 
-- Payload CMS v3.37.0+
+- Payload CMS v3.56.0+
 - Node.js 18.20.2+ or 20.9.0+
 - React 19.1.0+
 
@@ -164,9 +164,6 @@ payloadFeatureFlags({
         },
       },
     ],
-    
-    // Disable versioning (enabled by default)
-    versions: false,
     
     // Add hooks
     hooks: {
@@ -684,12 +681,12 @@ All of these take a `payload: Payload` instance as their final argument (obtaine
 ### Common Issues
 
 **Plugin not loading:**
-- Ensure Payload CMS v3.37.0+ is installed
+- Ensure Payload CMS v3.56.0+ is installed
 - Check that the plugin is properly added to the `plugins` array in your Payload config
 
 **Feature flags not appearing:**
-- Verify that collections are specified in the plugin configuration
 - Check that the plugin is not disabled (`disabled: false`)
+- Check that `collectionOverrides.access` allows the current user to read the feature flags collection
 
 **TypeScript errors:**
 - Ensure all peer dependencies are installed
