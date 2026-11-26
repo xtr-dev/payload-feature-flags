@@ -22,7 +22,7 @@ This is a Payload CMS v3 plugin for feature flags (@xtr-dev/payload-feature-flag
 - `pnpm copyfiles` - Copy non-TS assets to dist
 
 ### Testing & Quality
-- `pnpm test` - Run all tests (integration + e2e)
+- `pnpm test` - Run the integration tests (alias for `pnpm test:int`; e2e is separate because Playwright needs installed browsers)
 - `pnpm test:int` - Run integration tests with Vitest
 - `pnpm test:e2e` - Run end-to-end tests with Playwright
 - `pnpm lint` - Run ESLint
