@@ -1,0 +1,194 @@
+{
+  "$schema": "https://unpkg.com/@xtr-dev/changelog/schema/versions.schema.json",
+  "schemaVersion": 2,
+  "versions": [
+    {
+      "version": "0.2.0",
+      "date": "2026-11-26",
+      "commit": "e74fbe5",
+      "breaking": true,
+      "groups": {
+        "breaking": [
+          {
+            "type": "fix",
+            "scope": null,
+            "description": "bucket rollouts and variants per flag and treat rolloutPercentage 0 as nobody (#54)",
+            "commit": "e74fbe5",
+            "hash": "e74fbe548ab90a0012bcf5728df09203ff897a65",
+            "author": "Bas",
+            "breaking": true,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ],
+        "fixes": [
+          {
+            "type": "fix",
+            "scope": null,
+            "description": "bucket rollouts and variants per flag and treat rolloutPercentage 0 as nobody (#54)",
+            "commit": "e74fbe5",
+            "hash": "e74fbe548ab90a0012bcf5728df09203ff897a65",
+            "author": "Bas",
+            "breaking": true,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "fix",
+            "scope": "views",
+            "description": "render /admin/feature-flags-overview as a root view (Payload 3.56 to 3.94) (#40)",
+            "commit": "3096620",
+            "hash": "3096620ad9ecca1ed2ed16b1b73682951344b4db",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "turbowombat.f038 <turbowombat.f038@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Sonnet 5 <noreply@anthropic.com>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "ninjamango.a697 <ninjamango.a697@agents.wandel.local>"
+              }
+            ]
+          },
+          {
+            "type": "fix",
+            "scope": "cache",
+            "description": "pass an immediate-expiry profile to revalidateTag (#55)",
+            "commit": "418f163",
+            "hash": "418f1638ee3d5fe958729a946d8109cfd62584af",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "type": "build",
+            "scope": "lint",
+            "description": "add @eslint/js so pnpm lint runs (#56)",
+            "commit": "bc18625",
+            "hash": "bc1862515f7983e7b66ce380d032a9560bd52d52",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.0",
+      "date": "2026-11-25",
+      "commit": "b15670d",
+      "breaking": false,
+      "groups": {
+        "fixes": [
+          {
+            "type": "fix",
+            "scope": null,
+            "description": "align React peer dependency floor",
+            "commit": "7ff2cd9",
+            "hash": "7ff2cd92f99bbbae9a467f23e31255dd1ff19e14",
+            "author": "titan.7f33",
+            "breaking": false,
+            "notes": []
+          },
+          {
+            "type": "fix",
+            "scope": null,
+            "description": "declare runtime peer dependencies",
+            "commit": "01dfa5f",
+            "hash": "01dfa5f5d4a18e187158ff9765846fd3ffd097ab",
+            "author": "peacock.acf3",
+            "breaking": false,
+            "notes": []
+          }
+        ],
+        "other": [
+          {
+            "type": "chore",
+            "scope": "package",
+            "description": "declare the repository for npm trusted publishing (#53)",
+            "commit": "b15670d",
+            "hash": "b15670df2399699154d8db9d73cd1e11c3b9ad25",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "test",
+            "scope": null,
+            "description": "make pnpm test run the Vitest suite instead of exit 0 (#23)",
+            "commit": "86fe535",
+            "hash": "86fe535529058464865de58c63c9638c80298675",
+            "author": "XTR Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "wobblybacon.c67d <wobblybacon.c67d@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Bas <30904649+bvdaakster@users.noreply.github.com>"
+              }
+            ]
+          },
+          {
+            "type": "ci",
+            "scope": null,
+            "description": "release through the shared workflow with xtr-dev/changelog (#51)",
+            "commit": "251e2cf",
+            "hash": "251e2cfe06de475d79c9b9800ebca100e37d8522",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "ci",
+            "scope": null,
+            "description": "check the version only when a PR releases (#44)",
+            "commit": "1b4b729",
+            "hash": "1b4b7296bdfa42404e3ba6350533cd580d00ada5",
+            "author": "Bas",
+            "breaking": false,
+            "notes": []
+          }
+        ]
+      }
+    }
+  ]
+}
