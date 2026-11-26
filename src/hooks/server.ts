@@ -1,10 +1,12 @@
-import { Payload } from 'payload'
+import type { Payload } from 'payload'
+
 import { cache } from "react"
 
 import type { FeatureFlagsCache } from '../cache.js'
-import { FeatureFlag, toFeatureFlag } from '../utils/mappers.js'
+import type { FeatureFlag} from '../utils/mappers.js';
 
 import { isUserInRolloutBucket, selectVariantForUser } from '../bucketing.js'
+import { toFeatureFlag } from '../utils/mappers.js'
 
 // Must match FEATURE_FLAGS_CUSTOM_KEY in src/index.ts. Duplicated rather than
 // imported so the RSC entry point does not pull in the plugin config module.
@@ -63,12 +65,12 @@ export const getFeatureFlag = cache(async (flagName: string, payload: Payload): 
     return await withCrossRequestCache(payload, [collectionSlug, 'flag', flagName], async () => {
       const result = await payload.find({
         collection: collectionSlug,
+        limit: 1,
         where: {
           name: {
             equals: flagName,
           },
         },
-        limit: 1,
       })
 
       if (result.docs.length === 0) {
@@ -101,12 +103,12 @@ export const getAllFeatureFlags = cache(async (payload: Payload): Promise<Record
     return await withCrossRequestCache(payload, [collectionSlug, 'all'], async () => {
       const result = await payload.find({
         collection: collectionSlug,
+        limit: 1000,
         where: {
           enabled: {
             equals: true,
           },
         },
-        limit: 1000,
       })
 
       const flags: Record<string, FeatureFlag> = {}
@@ -147,7 +149,7 @@ export const getUserVariant = cache(async (
   flagName: string,
   userId: string,
   payload: Payload
-): Promise<string | null> => {
+): Promise<null | string> => {
   const flag = await getFeatureFlag(flagName, payload)
 
   if (!flag?.enabled || !flag.variants || flag.variants.length === 0) {
@@ -167,12 +169,12 @@ export const getFeatureFlagsByTag = cache(async (tag: string, payload: Payload):
     return await withCrossRequestCache(payload, [collectionSlug, 'tag', tag], async () => {
       const result = await payload.find({
         collection: collectionSlug,
+        limit: 1000,
         where: {
           'tags.tag': {
             equals: tag,
           },
         },
-        limit: 1000,
       })
 
       return result.docs.map(doc => toFeatureFlag(doc))

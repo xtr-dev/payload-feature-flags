@@ -61,7 +61,7 @@ export function isUserInRolloutBucket(flagName: string, userId: string, rolloutP
  * Picks a variant by weight (weights are percentages). When the weights add up
  * to less than 100, users in the remaining buckets get the first variant.
  */
-export function selectVariantForUser(flagName: string, userId: string, variants: unknown): string | null {
+export function selectVariantForUser(flagName: string, userId: string, variants: unknown): null | string {
   if (!Array.isArray(variants) || variants.length === 0) {
     return null
   }

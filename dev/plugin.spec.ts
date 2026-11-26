@@ -13,9 +13,9 @@ const featureFlagsCollection = (config: Config) =>
   config.collections!.find((collection) => collection.slug === 'feature-flags')!
 
 const hostEndpoint: Endpoint = {
-  path: '/host-endpoint',
-  method: 'get',
   handler: async () => new Response('host'),
+  method: 'get',
+  path: '/host-endpoint',
 }
 
 describe('enableCustomListView', () => {
@@ -30,7 +30,6 @@ describe('enableCustomListView', () => {
 
   test('survives collectionOverrides.admin.components and keeps the override', () => {
     const config = applyPlugin({
-      enableCustomListView: true,
       collectionOverrides: {
         admin: {
           components: {
@@ -38,6 +37,7 @@ describe('enableCustomListView', () => {
           },
         },
       },
+      enableCustomListView: true,
     })
 
     const components = featureFlagsCollection(config).admin?.components
@@ -47,12 +47,12 @@ describe('enableCustomListView', () => {
 
   test('survives collectionOverrides.admin that sets unrelated admin keys', () => {
     const config = applyPlugin({
-      enableCustomListView: true,
       collectionOverrides: {
         admin: {
           group: 'Custom Group',
         },
       },
+      enableCustomListView: true,
     })
 
     const admin = featureFlagsCollection(config).admin
@@ -62,7 +62,6 @@ describe('enableCustomListView', () => {
 
   test('leaves the user components untouched when disabled', () => {
     const config = applyPlugin({
-      enableCustomListView: false,
       collectionOverrides: {
         admin: {
           components: {
@@ -70,6 +69,7 @@ describe('enableCustomListView', () => {
           },
         },
       },
+      enableCustomListView: false,
     })
 
     const components = featureFlagsCollection(config).admin?.components
@@ -81,8 +81,8 @@ describe('enableCustomListView', () => {
     const config = applyPlugin({
       collectionOverrides: {
         admin: {
-          useAsTitle: 'description',
           description: 'Custom description',
+          useAsTitle: 'description',
         },
       },
     })
@@ -101,8 +101,8 @@ describe('host configuration', () => {
     const hostView = { Component: './HostDashboard', path: '/host' }
 
     const config = payloadFeatureFlags()({
-      collections: [posts],
       admin: { components: { views: { host: hostView } } },
+      collections: [posts],
       endpoints: [hostEndpoint],
     } as unknown as Config)
 
@@ -112,8 +112,8 @@ describe('host configuration', () => {
     expect(config.admin?.components?.views?.host).toBe(hostView)
     expect(config.admin?.components?.views?.['feature-flags-overview']).toMatchObject({
       Component: {
-        path: '@xtr-dev/payload-feature-flags/views',
         exportName: 'FeatureFlagsOverviewView',
+        path: '@xtr-dev/payload-feature-flags/views',
       },
       path: '/feature-flags-overview',
     })
@@ -126,8 +126,8 @@ describe('host configuration', () => {
     const hostView = { Component: './HostDashboard', path: '/host' }
 
     const config = payloadFeatureFlags({ disabled: true })({
-      collections: [posts],
       admin: { components: { views: { host: hostView } } },
+      collections: [posts],
       endpoints: [hostEndpoint],
     } as unknown as Config)
 

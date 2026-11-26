@@ -1,14 +1,14 @@
 
+import {sqliteAdapter} from "@payloadcms/db-sqlite"
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
-import { payloadFeatureFlags } from '../src/index.js'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
+import { payloadFeatureFlags } from '../src/index.js'
 import { testEmailAdapter } from './helpers/testEmailAdapter.js'
 import { seed } from './seed.js'
-import {sqliteAdapter} from "@payloadcms/db-sqlite"
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -42,8 +42,8 @@ export default buildConfig({
         {
           name: 'status',
           type: 'select',
-          options: ['draft', 'published'],
           defaultValue: 'draft',
+          options: ['draft', 'published'],
         },
         {
           name: 'publishedAt',
@@ -75,8 +75,8 @@ export default buildConfig({
         {
           name: 'layout',
           type: 'select',
-          options: ['default', 'landing', 'sidebar'],
           defaultValue: 'default',
+          options: ['default', 'landing', 'sidebar'],
         },
       ],
     },
@@ -94,8 +94,8 @@ export default buildConfig({
         {
           name: 'role',
           type: 'select',
-          options: ['admin', 'editor', 'user'],
           defaultValue: 'user',
+          options: ['admin', 'editor', 'user'],
         },
       ],
     },
@@ -137,41 +137,41 @@ export default buildConfig({
 
       // Custom collection configuration
       collectionOverrides: {
-        admin: {
-          useAsTitle: 'name',
-          group: 'Configuration',
-          description: 'Manage feature flags for the development environment',
-        },
         access: {
           // Only authenticated users can read/manage feature flags
-          read: ({ req: { user } }) => !!user,
           create: ({ req: { user } }) => !!user,
-          update: ({ req: { user } }) => user?.role === 'admin',
           delete: ({ req: { user } }) => user?.role === 'admin',
+          read: ({ req: { user } }) => !!user,
+          update: ({ req: { user } }) => user?.role === 'admin',
+        },
+        admin: {
+          description: 'Manage feature flags for the development environment',
+          group: 'Configuration',
+          useAsTitle: 'name',
         },
         fields: ({ defaultFields }) => [
           ...defaultFields,
           {
             name: 'environment',
             type: 'select',
+            admin: {
+              description: 'Which environment this flag applies to',
+            },
+            defaultValue: 'development',
             options: [
               { label: 'Development', value: 'development' },
               { label: 'Staging', value: 'staging' },
               { label: 'Production', value: 'production' },
             ],
             required: true,
-            defaultValue: 'development',
-            admin: {
-              description: 'Which environment this flag applies to',
-            },
           },
           {
             name: 'owner',
             type: 'relationship',
-            relationTo: 'users',
             admin: {
               description: 'Team member responsible for this feature flag',
             },
+            relationTo: 'users',
           },
           {
             name: 'expiresAt',
@@ -189,8 +189,16 @@ export default buildConfig({
           },
         ],
         hooks: {
+          afterChange: [
+            ({ doc, operation, req }) => {
+              // Send notification for critical flag changes
+              if (doc.environment === 'production' && req.user) {
+                console.log(`🚨 Production feature flag "${doc.name}" was ${operation === 'create' ? 'created' : 'modified'} by ${req.user.email}`)
+              }
+            },
+          ],
           beforeChange: [
-            async ({ data, req, operation }) => {
+            ({ data, operation, req }) => {
               // Auto-assign current user as owner for new flags
               if (operation === 'create' && !data.owner && req.user) {
                 data.owner = req.user.id
@@ -202,14 +210,6 @@ export default buildConfig({
               }
 
               return data
-            },
-          ],
-          afterChange: [
-            async ({ doc, req, operation }) => {
-              // Send notification for critical flag changes
-              if (doc.environment === 'production' && req.user) {
-                console.log(`🚨 Production feature flag "${doc.name}" was ${operation === 'create' ? 'created' : 'modified'} by ${req.user.email}`)
-              }
             },
           ],
         },

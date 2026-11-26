@@ -7,8 +7,8 @@ import { describe, expect, test, vi } from 'vitest'
 // the auth/permission branching in renderFeatureFlagsOverview, not of the client bundle.
 vi.mock('../src/views/FeatureFlagsClient.js', () => ({
   default: (props: Record<string, unknown>) => ({
-    $$typeof: Symbol.for('react.element'),
     type: 'mock-feature-flags-client',
+    $$typeof: Symbol.for('react.element'),
     props,
   }),
 }))
@@ -21,37 +21,37 @@ const mockPayload = {
 }
 
 const makeProps = (overrides: {
-  user?: unknown
   read?: boolean
   update?: boolean
-}): AdminViewServerProps & { collectionSlug: string } =>
+  user?: unknown
+}): { collectionSlug: string } & AdminViewServerProps =>
   ({
+    collectionSlug: 'feature-flags',
     initPageResult: {
-      req: { user: 'user' in overrides ? overrides.user : { id: 'admin-1' } },
       permissions: {
         collections: {
           'feature-flags': { read: overrides.read ?? true, update: overrides.update ?? false },
         },
       },
+      req: { user: 'user' in overrides ? overrides.user : { id: 'admin-1' } },
     },
     payload: mockPayload,
-    collectionSlug: 'feature-flags',
-  }) as unknown as AdminViewServerProps & { collectionSlug: string }
+  }) as unknown as { collectionSlug: string } & AdminViewServerProps
 
 const makeListProps = (overrides: {
-  user?: unknown
   read?: boolean
   update?: boolean
+  user?: unknown
 }): ListViewServerProps =>
   ({
     collectionConfig: { slug: 'feature-flags' },
-    user: 'user' in overrides ? overrides.user : { id: 'admin-1' },
+    payload: mockPayload,
     permissions: {
       collections: {
         'feature-flags': { read: overrides.read ?? true, update: overrides.update ?? false },
       },
     },
-    payload: mockPayload,
+    user: 'user' in overrides ? overrides.user : { id: 'admin-1' },
   }) as unknown as ListViewServerProps
 
 // Root admin views (config.admin.components.views['feature-flags-overview']) receive
@@ -139,19 +139,19 @@ describe('FeatureFlagsView (collection list view props)', () => {
 // past the login check and crashed on `collectionConfig.slug` (a 500 page).
 describe('root admin view props as Payload 3.94 builds them', () => {
   const payload394RootProps = {
-    user: { id: 'admin-1' },
     initPageResult: {
-      req: { user: { id: 'admin-1' } },
       permissions: { collections: { 'feature-flags': { read: true, update: true } } },
+      req: { user: { id: 'admin-1' } },
     },
     payload: mockPayload,
+    user: { id: 'admin-1' },
   }
 
   test('FeatureFlagsOverviewView renders the dashboard with the slug from serverProps', async () => {
     const element: any = await FeatureFlagsOverviewView({
       ...payload394RootProps,
       collectionSlug: 'feature-flags',
-    } as unknown as AdminViewServerProps & { collectionSlug: string })
+    } as unknown as { collectionSlug: string } & AdminViewServerProps)
 
     expect(typeof element.type).toBe('function')
     expect(element.props.collectionSlug).toBe('feature-flags')
@@ -160,14 +160,14 @@ describe('root admin view props as Payload 3.94 builds them', () => {
 
   test('the plugin registers the root view as FeatureFlagsOverviewView with the collection slug', async () => {
     const { payloadFeatureFlags } = await import('../src/index.js')
-    const config: any = await payloadFeatureFlags({ collectionOverrides: { slug: 'flags' } })({
+    const config: any = payloadFeatureFlags({ collectionOverrides: { slug: 'flags' } })({
       collections: [],
     } as any)
 
     expect(config.admin.components.views['feature-flags-overview']).toEqual({
       Component: {
-        path: '@xtr-dev/payload-feature-flags/views',
         exportName: 'FeatureFlagsOverviewView',
+        path: '@xtr-dev/payload-feature-flags/views',
         serverProps: { collectionSlug: 'flags' },
       },
       path: '/feature-flags-overview',

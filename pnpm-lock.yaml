@@ -8,9 +8,6 @@ importers:
 
   .:
     devDependencies:
-      '@eslint/js':
-        specifier: 9.35.0
-        version: 9.35.0
       '@payloadcms/db-sqlite':
         specifier: 3.90.0
         version: 3.90.0(@types/pg@8.10.2)(payload@3.90.0(graphql@16.15.0)(typescript@5.7.3))(pg@8.16.3)
@@ -752,10 +749,6 @@ packages:
 
   '@eslint/js@9.14.0':
     resolution: {integrity: sha512-pFoEtFWCPyDOl+C6Ift+wC7Ro89otjigCf5vcuWqWgqNSQbRrpjSvdeE6ofLz4dHmyxD5f7gIdGT4+p36L6Twg==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@eslint/js@9.35.0':
-    resolution: {integrity: sha512-30iXE9whjlILfWobBkNerJo+TXYsgVM5ERQwMcMKCHckHflCmf7wXDAHlARoWnh0s1U72WqlbeyE7iAcCzuCPw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   '@eslint/js@9.39.5':
@@ -5617,8 +5610,6 @@ snapshots:
 
   '@eslint/js@9.14.0': {}
 
-  '@eslint/js@9.35.0': {}
-
   '@eslint/js@9.39.5': {}
 
   '@eslint/object-schema@2.1.7': {}
@@ -7014,8 +7005,8 @@ snapshots:
 
   '@typescript-eslint/project-service@8.43.0(typescript@5.7.3)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.43.0(typescript@5.7.3)
-      '@typescript-eslint/types': 8.43.0
+      '@typescript-eslint/tsconfig-utils': 8.74.0(typescript@5.7.3)
+      '@typescript-eslint/types': 8.74.0
       debug: 4.4.3
       typescript: 5.7.3
     transitivePeerDependencies:
@@ -7055,6 +7046,11 @@ snapshots:
   '@typescript-eslint/tsconfig-utils@8.74.0(typescript@5.7.2)':
     dependencies:
       typescript: 5.7.2
+
+  '@typescript-eslint/tsconfig-utils@8.74.0(typescript@5.7.3)':
+    dependencies:
+      typescript: 5.7.3
+    optional: true
 
   '@typescript-eslint/type-utils@8.14.0(eslint@9.14.0)(typescript@5.7.2)':
     dependencies:

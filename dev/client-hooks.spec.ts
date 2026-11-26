@@ -1,4 +1,5 @@
-import { beforeEach, afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+
 import { useFeatureFlags, useSpecificFeatureFlag } from '../src/hooks/client.js'
 import { toFeatureFlag } from '../src/utils/mappers.js'
 
@@ -24,21 +25,21 @@ const completeFlag = {
   name: 'new-homepage',
   description: 'Shows the redesigned homepage',
   enabled: true,
+  metadata: { owner: 'growth' },
   rolloutPercentage: 50,
+  tags: [{ tag: 'homepage' }, { tag: 'experiment' }],
   variants: [
     { name: 'control', weight: 50 },
     { name: 'variant-a', weight: 50 },
   ],
-  tags: [{ tag: 'homepage' }, { tag: 'experiment' }],
-  metadata: { owner: 'growth' },
 }
 
 const storedCompleteFlag = {
   ...completeFlag,
   id: 'flag-1',
   createdAt: '2026-08-23T00:00:00.000Z',
-  updatedAt: '2026-08-23T00:00:00.000Z',
   environment: 'production',
+  updatedAt: '2026-08-23T00:00:00.000Z',
 }
 
 const sparseFlag = {
@@ -47,34 +48,34 @@ const sparseFlag = {
 }
 
 const storedSparseFlag = {
+  id: 'flag-2',
   name: 'sparse-flag',
+  createdAt: '2026-08-23T00:00:00.000Z',
   description: null,
   enabled: true,
-  rolloutPercentage: null,
-  variants: null,
-  tags: null,
-  metadata: null,
-  id: 'flag-2',
-  createdAt: '2026-08-23T00:00:00.000Z',
-  updatedAt: '2026-08-23T00:00:00.000Z',
   environment: 'production',
+  metadata: null,
+  rolloutPercentage: null,
+  tags: null,
+  updatedAt: '2026-08-23T00:00:00.000Z',
+  variants: null,
 }
 
 const storedFlagWithNullableNestedFields = {
+  id: 'flag-3',
   name: 'nullable-nested',
+  createdAt: '2026-08-23T00:00:00.000Z',
   description: null,
   enabled: true,
-  rolloutPercentage: null,
-  variants: [{ name: 'control', weight: 100, metadata: null, id: 'v1' }],
-  tags: [
-    { tag: null, id: 't1' },
-    { tag: 'homepage', id: 't2' },
-  ],
-  metadata: null,
-  id: 'flag-3',
-  createdAt: '2026-08-23T00:00:00.000Z',
-  updatedAt: '2026-08-23T00:00:00.000Z',
   environment: 'production',
+  metadata: null,
+  rolloutPercentage: null,
+  tags: [
+    { id: 't1', tag: null },
+    { id: 't2', tag: 'homepage' },
+  ],
+  updatedAt: '2026-08-23T00:00:00.000Z',
+  variants: [{ id: 'v1', name: 'control', metadata: null, weight: 100 }],
 }
 
 describe('Client and server feature flag mapper', () => {
@@ -97,8 +98,8 @@ describe('Client and server feature flag mapper', () => {
     expect(toFeatureFlag(storedFlagWithNullableNestedFields)).toEqual({
       name: 'nullable-nested',
       enabled: true,
-      variants: [{ name: 'control', weight: 100 }],
       tags: [{ tag: 'homepage' }],
+      variants: [{ name: 'control', weight: 100 }],
     })
   })
 
@@ -109,8 +110,8 @@ describe('Client and server feature flag mapper', () => {
       tags: [{ tag: 'fetched' }],
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
       json: async () => ({ docs: [responseDocument] }),
+      ok: true,
     }))
 
     const hook = useFeatureFlags([{ name: responseDocument.name }], { serverURL: 'https://flags.test' })
@@ -126,8 +127,8 @@ describe('Client and server feature flag mapper', () => {
       tags: [{ tag: 'fetched' }],
     }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
       json: async () => ({ docs: [responseDocument] }),
+      ok: true,
     }))
 
     const hook = useSpecificFeatureFlag(responseDocument.name, { serverURL: 'https://flags.test' })
@@ -137,10 +138,10 @@ describe('Client and server feature flag mapper', () => {
       name: responseDocument.name,
       description: 'Fetched description',
       enabled: true,
-      rolloutPercentage: 50,
-      variants: responseDocument.variants,
-      tags: [{ tag: 'fetched' }],
       metadata: responseDocument.metadata,
+      rolloutPercentage: 50,
+      tags: [{ tag: 'fetched' }],
+      variants: responseDocument.variants,
     })
   })
 })

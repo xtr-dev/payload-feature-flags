@@ -1,4 +1,5 @@
 import type { AdminViewServerProps } from 'payload'
+
 import { renderFeatureFlagsOverview } from './renderFeatureFlagsOverview.js'
 
 // Registered as a root admin view (config.admin.components.views['feature-flags-overview'],
@@ -11,14 +12,14 @@ import { renderFeatureFlagsOverview } from './renderFeatureFlagsOverview.js'
 // and collectionSlug has to be threaded in via the Component's serverProps
 // (src/index.ts) since a root view is never told which collection it is for.
 export default async function FeatureFlagsOverviewView(
-  props: AdminViewServerProps & { collectionSlug: string },
+  props: { collectionSlug: string } & AdminViewServerProps,
 ) {
-  const { initPageResult, payload, collectionSlug } = props
+  const { collectionSlug, initPageResult, payload } = props
 
   return renderFeatureFlagsOverview({
-    user: initPageResult?.req?.user,
-    permissions: initPageResult?.permissions,
     collectionSlug,
     payload,
+    permissions: initPageResult?.permissions,
+    user: initPageResult?.req?.user,
   })
 }

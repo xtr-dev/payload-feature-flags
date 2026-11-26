@@ -8,21 +8,16 @@
  * next request.
  */
 export interface FeatureFlagsCache {
+  /** Drop everything this cache holds. Called after a flag is changed or deleted. */
+  invalidate(): Promise<void> | void
   /**
    * Return the cached result for `key`, or run `load`, store and return its
    * result. `load` may throw; a thrown error must not be cached.
    */
   wrap<T>(key: string[], load: () => Promise<T>): Promise<T>
-  /** Drop everything this cache holds. Called after a flag is changed or deleted. */
-  invalidate(): Promise<void> | void
 }
 
 export type NextCacheOptions = {
-  /**
-   * Cache tag for every flag lookup; `revalidateTag(tag)` clears them.
-   * @default 'payload-feature-flags'
-   */
-  tag?: string
   /**
    * Seconds before a cached lookup is refreshed even without a change, or
    * `false` to keep it until the tag is revalidated. The finite default is a
@@ -30,7 +25,12 @@ export type NextCacheOptions = {
    * write from another server instance or a direct database edit.
    * @default 60
    */
-  revalidate?: number | false
+  revalidate?: false | number
+  /**
+   * Cache tag for every flag lookup; `revalidateTag(tag)` clears them.
+   * @default 'payload-feature-flags'
+   */
+  tag?: string
 }
 
 export const DEFAULT_CACHE_TAG = 'payload-feature-flags'
@@ -101,33 +101,6 @@ export function createNextCache(options: NextCacheOptions = {}): FeatureFlagsCac
   const revalidate = options.revalidate ?? DEFAULT_CACHE_REVALIDATE
 
   return {
-    async wrap<T>(key: string[], load: () => Promise<T>): Promise<T> {
-      const next = await loadNextCache()
-      if (!next) {
-        return load()
-      }
-
-      // Remember an error thrown by `load` itself, so it is rethrown as is and
-      // not mistaken for `unstable_cache` failing outside a Next.js server.
-      let loadFailure: { error: unknown } | undefined
-      const guardedLoad = async () => {
-        try {
-          return await load()
-        } catch (error) {
-          loadFailure = { error }
-          throw error
-        }
-      }
-
-      try {
-        return await next.unstable_cache(guardedLoad, [tag, ...key], { tags: [tag], revalidate })()
-      } catch (error) {
-        if (loadFailure) {
-          throw loadFailure.error
-        }
-        return load()
-      }
-    },
     async invalidate() {
       const next = await loadNextCache()
       if (!next) {
@@ -159,12 +132,39 @@ export function createNextCache(options: NextCacheOptions = {}): FeatureFlagsCac
         )
       }
     },
+    async wrap<T>(key: string[], load: () => Promise<T>): Promise<T> {
+      const next = await loadNextCache()
+      if (!next) {
+        return load()
+      }
+
+      // Remember an error thrown by `load` itself, so it is rethrown as is and
+      // not mistaken for `unstable_cache` failing outside a Next.js server.
+      let loadFailure: { error: unknown } | undefined
+      const guardedLoad = async () => {
+        try {
+          return await load()
+        } catch (error) {
+          loadFailure = { error }
+          throw error
+        }
+      }
+
+      try {
+        return await next.unstable_cache(guardedLoad, [tag, ...key], { revalidate, tags: [tag] })()
+      } catch (error) {
+        if (loadFailure) {
+          throw loadFailure.error
+        }
+        return load()
+      }
+    },
   }
 }
 
 /** Resolves the plugin's `cache` option to a cache, or `undefined` for none. */
 export function resolveCacheOption(
-  option: boolean | NextCacheOptions | FeatureFlagsCache | undefined,
+  option: boolean | FeatureFlagsCache | NextCacheOptions | undefined,
 ): FeatureFlagsCache | undefined {
   if (!option) {
     return undefined

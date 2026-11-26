@@ -17,7 +17,6 @@ describe('payloadFeatureFlags collection fields', () => {
   test.each([
     {
       description: 'default options',
-      options: {},
       expected: [
         'name',
         'description',
@@ -27,39 +26,40 @@ describe('payloadFeatureFlags collection fields', () => {
         'tags',
         'metadata',
       ],
+      options: {},
     },
     {
       description: 'rollouts and variants disabled',
-      options: { enableRollouts: false, enableVariants: false },
       expected: ['name', 'description', 'enabled', 'tags', 'metadata'],
+      options: { enableRollouts: false, enableVariants: false },
     },
     {
       description: 'only rollouts disabled',
-      options: { enableRollouts: false },
       expected: ['name', 'description', 'enabled', 'variants', 'tags', 'metadata'],
+      options: { enableRollouts: false },
     },
     {
       description: 'only variants disabled',
-      options: { enableVariants: false },
       expected: ['name', 'description', 'enabled', 'rolloutPercentage', 'tags', 'metadata'],
+      options: { enableVariants: false },
     },
   ] satisfies Array<{
     description: string
-    options: PayloadFeatureFlagsConfig
     expected: string[]
-  }>)('$description', ({ options, expected }) => {
+    options: PayloadFeatureFlagsConfig
+  }>)('$description', ({ expected, options }) => {
     expect(
       getCollection(options).fields.map((field) => ('name' in field ? field.name : undefined)),
     ).toEqual(expected)
   })
 
   test.each([
-    { options: {}, expected: false },
-    { options: { defaultValue: true }, expected: true },
+    { expected: false, options: {} },
+    { expected: true, options: { defaultValue: true } },
   ] satisfies Array<{
-    options: PayloadFeatureFlagsConfig
     expected: boolean
-  }>)('sets enabled.defaultValue to $expected', ({ options, expected }) => {
+    options: PayloadFeatureFlagsConfig
+  }>)('sets enabled.defaultValue to $expected', ({ expected, options }) => {
     const enabled = getNamedField(getCollection(options).fields, 'enabled')
 
     expect(enabled).toMatchObject({ defaultValue: expected })
@@ -83,9 +83,9 @@ describe('payloadFeatureFlags collection fields', () => {
     const variants = getNamedField(fields, 'variants')
 
     expect(rolloutPercentage).toMatchObject({
-      min: 0,
-      max: 100,
       defaultValue: 100,
+      max: 100,
+      min: 0,
     })
     expect(variants).toMatchObject({ type: 'array' })
 
@@ -100,7 +100,7 @@ describe('payloadFeatureFlags collection fields', () => {
     const variantsCondition = variants.admin?.condition
     const weight = getNamedField(variants.fields, 'weight')
 
-    expect(weight).toMatchObject({ required: true, min: 0, max: 100 })
+    expect(weight).toMatchObject({ max: 100, min: 0, required: true })
     expect(rolloutCondition).toBeTypeOf('function')
     expect(variantsCondition).toBeTypeOf('function')
 

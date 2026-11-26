@@ -9,14 +9,14 @@ export default function AppLayout({
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta content="width=device-width, initial-scale=1" name="viewport" />
         <title>Feature Flags Demo - Payload CMS Plugin</title>
       </head>
       <body style={{ 
-        margin: 0, 
-        padding: 0,
+        backgroundColor: '#f8fafc', 
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        backgroundColor: '#f8fafc'
+        margin: 0,
+        padding: 0
       }}>
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -37,35 +37,35 @@ export default function AppLayout({
         }} />
         <nav style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          padding: '1rem 2rem',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          padding: '1rem 2rem'
         }}>
           <div style={{ 
-            maxWidth: '1200px', 
-            margin: '0 auto',
+            alignItems: 'center', 
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            margin: '0 auto',
+            maxWidth: '1200px'
           }}>
             <div>
               <h1 style={{ 
                 color: 'white', 
-                margin: 0, 
-                fontSize: '1.5rem',
-                fontWeight: '600'
+                fontSize: '1.5rem', 
+                fontWeight: '600',
+                margin: 0
               }}>
-                🚩 Payload Feature Flags
+                <span aria-hidden="true">🚩</span> Payload Feature Flags
               </h1>
               <p style={{ 
                 color: 'rgba(255,255,255,0.8)', 
-                margin: '0.25rem 0 0 0', 
-                fontSize: '0.9rem' 
+                fontSize: '0.9rem', 
+                margin: '0.25rem 0 0 0' 
               }}>
                 Development & Testing Environment
               </p>
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <a href="/admin" className="nav-link">
+              <a className="nav-link" href="/admin">
                 Admin Panel
               </a>
             </div>
@@ -77,11 +77,11 @@ export default function AppLayout({
         <footer style={{
           background: '#2d3748',
           color: 'white',
+          fontSize: '0.9rem',
           padding: '1rem 2rem',
-          textAlign: 'center',
-          fontSize: '0.9rem'
+          textAlign: 'center'
         }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ margin: '0 auto', maxWidth: '1200px' }}>
             <p style={{ margin: 0 }}>
               Built with <strong>@xtr-dev/payload-feature-flags</strong> • 
               <a 

@@ -1,12 +1,13 @@
 'use client'
-import React from 'react'
 import type { ListViewClientProps } from 'payload'
-import { useState, useEffect, useCallback, useMemo, memo } from 'react'
+
 import {
   useConfig,
   useTheme
 } from '@payloadcms/ui'
-import type { PayloadID, FeatureFlag } from '../types/index.js'
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
+
+import type { FeatureFlag, PayloadID } from '../types/index.js'
 
 // Simple debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -26,17 +27,27 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 interface FeatureFlagsClientProps {
-  initialFlags?: FeatureFlag[]
   canUpdate?: boolean
-  maxFlags?: number // Configurable limit for API requests
   collectionSlug?: string // Configurable collection slug for URLs
+  initialFlags?: FeatureFlag[]
+  maxFlags?: number // Configurable limit for API requests
+}
+
+type SortField = 'enabled' | 'name' | 'rolloutPercentage' | 'updatedAt'
+
+/** Column header arrow: faded when the table is sorted by another column. */
+const SortIcon = ({ direction, field, sortField }: { direction: 'asc' | 'desc'; field: SortField; sortField: SortField }) => {
+  if (sortField !== field) {
+    return <span style={{ opacity: 0.3 }}>⇅</span>
+  }
+  return <span>{direction === 'asc' ? '↑' : '↓'}</span>
 }
 
 const FeatureFlagsClientComponent = ({
-  initialFlags = [],
   canUpdate = true,
-  maxFlags = 100,
-  collectionSlug = 'feature-flags'
+  collectionSlug = 'feature-flags',
+  initialFlags = [],
+  maxFlags = 100
 }: FeatureFlagsClientProps) => {
   const { config } = useConfig()
   const { theme } = useTheme()
@@ -44,9 +55,9 @@ const FeatureFlagsClientComponent = ({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [sortField, setSortField] = useState<'name' | 'enabled' | 'rolloutPercentage' | 'updatedAt'>('name')
+  const [sortField, setSortField] = useState<SortField>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-  const [saving, setSaving] = useState<PayloadID | null>(null)
+  const [saving, setSaving] = useState<null | PayloadID>(null)
   const [successMessage, setSuccessMessage] = useState('')
 
   // Debounce search to reduce re-renders
@@ -100,7 +111,7 @@ const FeatureFlagsClientComponent = ({
       await fetchFlags(abortController.signal)
     }
 
-    loadFlags()
+    void loadFlags()
 
     return () => {
       abortController.abort()
@@ -121,12 +132,12 @@ const FeatureFlagsClientComponent = ({
 
     try {
       const response = await fetch(`${config.serverURL}${config.routes.api}/${collectionSlug}/${flagId}`, {
-        method: 'PATCH',
+        body: JSON.stringify(updates),
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updates),
+        method: 'PATCH',
       })
 
       if (!response.ok) {
@@ -190,52 +201,46 @@ const FeatureFlagsClientComponent = ({
         bVal = new Date(bVal || 0).getTime()
       }
 
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      if (aVal < bVal) {return sortDirection === 'asc' ? -1 : 1}
+      if (aVal > bVal) {return sortDirection === 'asc' ? 1 : -1}
       return 0
     })
 
     return filtered
   }, [flags, debouncedSearch, sortField, sortDirection])
 
-  const SortIcon = ({ field }: { field: typeof sortField }) => {
-    if (sortField !== field) {
-      return <span style={{ opacity: 0.3 }}>⇅</span>
-    }
-    return <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-  }
 
   // Theme-aware styles
   const getThemeStyles = () => ({
     background: 'var(--theme-bg)',
-    surface: 'var(--theme-elevation-50)',
-    surfaceHover: 'var(--theme-elevation-100)',
     border: 'var(--theme-elevation-150)',
-    text: 'var(--theme-text)',
-    textMuted: 'var(--theme-text-400)',
-    textSubdued: 'var(--theme-text-600)',
-    primary: 'var(--theme-success-500)',
-    warning: 'var(--theme-warning-500)',
     error: 'var(--theme-error-500)',
+    headerBg: 'var(--theme-elevation-100)',
     info: 'var(--theme-info-500)',
     inputBg: 'var(--theme-elevation-0)',
     inputBorder: 'var(--theme-elevation-250)',
-    headerBg: 'var(--theme-elevation-100)',
+    primary: 'var(--theme-success-500)',
+    surface: 'var(--theme-elevation-50)',
+    surfaceHover: 'var(--theme-elevation-100)',
+    text: 'var(--theme-text)',
+    textMuted: 'var(--theme-text-400)',
+    textSubdued: 'var(--theme-text-600)',
+    warning: 'var(--theme-warning-500)',
   })
 
   const styles = getThemeStyles()
 
   return (
     <div style={{
-      padding: '2rem',
-      maxWidth: '100%'
+      maxWidth: '100%',
+      padding: '2rem'
     }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{
+          color: styles.text,
           fontSize: '2rem',
           fontWeight: '700',
-          color: styles.text,
           margin: '0 0 0.5rem 0'
         }}>
           Feature Flags
@@ -254,10 +259,10 @@ const FeatureFlagsClientComponent = ({
               backgroundColor: styles.info + '20',
               border: `1px solid ${styles.info}`,
               borderRadius: '0.5rem',
-              padding: '0.75rem 1rem',
-              marginBottom: '1rem',
               color: styles.info,
-              fontSize: '0.875rem'
+              fontSize: '0.875rem',
+              marginBottom: '1rem',
+              padding: '0.75rem 1rem'
             }}
           >
             <strong>Read-Only Access:</strong> You can view feature flags but cannot edit them. Contact your administrator to request update permissions.
@@ -267,28 +272,28 @@ const FeatureFlagsClientComponent = ({
 
       {loading ? (
         <div style={{
-          padding: '2rem',
-          textAlign: 'center',
-          minHeight: '400px',
-          display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          display: 'flex',
+          justifyContent: 'center',
+          minHeight: '400px',
+          padding: '2rem',
+          textAlign: 'center'
         }}>
-          <div style={{ fontSize: '1.125rem', color: styles.textMuted }}>Loading feature flags...</div>
+          <div style={{ color: styles.textMuted, fontSize: '1.125rem' }}>Loading feature flags...</div>
         </div>
       ) : (
         <>
           {/* Success/Error Messages */}
           {successMessage && (
             <div style={{
-              position: 'fixed',
-              top: '20px',
-              right: '20px',
               backgroundColor: styles.primary,
-              color: 'white',
-              padding: '0.75rem 1.5rem',
               borderRadius: '0.5rem',
               boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+              color: 'white',
+              padding: '0.75rem 1.5rem',
+              position: 'fixed',
+              right: '20px',
+              top: '20px',
               zIndex: 1000,
             }}>
               {successMessage}
@@ -299,12 +304,12 @@ const FeatureFlagsClientComponent = ({
             <div
               role="alert"
               style={{
-                marginBottom: '1rem',
                 backgroundColor: styles.error + '20',
                 border: `1px solid ${styles.error}`,
                 borderRadius: '0.5rem',
-                padding: '1rem',
-                color: styles.error
+                color: styles.error,
+                marginBottom: '1rem',
+                padding: '1rem'
               }}
             >
               <strong>Error:</strong> {error}
@@ -313,45 +318,45 @@ const FeatureFlagsClientComponent = ({
 
       {/* Controls */}
       <div style={{
+        alignItems: 'center',
         display: 'flex',
         gap: '1rem',
-        marginBottom: '2rem',
-        alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        marginBottom: '2rem'
       }}>
         <input
-          type="text"
-          placeholder="Search flags by name, description, or tags..."
-          value={search}
           onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search flags by name, description, or tags..."
           style={{
-            padding: '0.5rem 1rem',
+            backgroundColor: styles.inputBg,
             border: `1px solid ${styles.inputBorder}`,
             borderRadius: '0.5rem',
+            color: styles.text,
             fontSize: '0.875rem',
-            width: '300px',
-            backgroundColor: styles.inputBg,
-            color: styles.text
+            padding: '0.5rem 1rem',
+            width: '300px'
           }}
+          type="text"
+          value={search}
         />
 
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ fontSize: '0.875rem', color: styles.textMuted }}>
+        <div style={{ alignItems: 'center', display: 'flex', gap: '1rem' }}>
+          <div style={{ color: styles.textMuted, fontSize: '0.875rem' }}>
             {filteredAndSortedFlags.length} of {flags.filter(f => f && f.name).length} flags
           </div>
           <button
             onClick={() => fetchFlags()}
             style={{
-              padding: '0.5rem 1rem',
+              backgroundColor: styles.surface,
               border: `1px solid ${styles.inputBorder}`,
               borderRadius: '0.5rem',
-              backgroundColor: styles.surface,
               color: styles.text,
+              cursor: 'pointer',
               fontSize: '0.875rem',
-              cursor: 'pointer'
+              padding: '0.5rem 1rem'
             }}
           >
-            🔄 Refresh
+            <span aria-hidden="true">🔄</span> Refresh
           </button>
         </div>
       </div>
@@ -361,119 +366,119 @@ const FeatureFlagsClientComponent = ({
         backgroundColor: styles.surface,
         border: `1px solid ${styles.border}`,
         borderRadius: '0.75rem',
-        overflow: 'hidden',
-        marginBottom: '2rem'
+        marginBottom: '2rem',
+        overflow: 'hidden'
       }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{
-            width: '100%',
             borderCollapse: 'collapse',
-            fontSize: '0.875rem'
+            fontSize: '0.875rem',
+            width: '100%'
           }}>
             <thead>
               <tr style={{ backgroundColor: styles.headerBg }}>
                 <th style={{
-                  padding: '0.75rem 1rem',
-                  textAlign: 'left',
-                  fontWeight: '600',
-                  color: styles.text,
-                  borderBottom: `1px solid ${styles.border}`,
-                  position: 'sticky',
-                  left: 0,
                   backgroundColor: styles.headerBg,
-                  minWidth: '50px'
+                  borderBottom: `1px solid ${styles.border}`,
+                  color: styles.text,
+                  fontWeight: '600',
+                  left: 0,
+                  minWidth: '50px',
+                  padding: '0.75rem 1rem',
+                  position: 'sticky',
+                  textAlign: 'left'
                 }}>
                   Status
                 </th>
                 <th
                   onClick={() => handleSort('name')}
                   style={{
+                    borderBottom: `1px solid ${styles.border}`,
+                    color: styles.text,
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    minWidth: '200px',
                     padding: '0.75rem 1rem',
                     textAlign: 'left',
-                    fontWeight: '600',
-                    color: styles.text,
-                    borderBottom: `1px solid ${styles.border}`,
-                    cursor: 'pointer',
-                    minWidth: '200px',
                     userSelect: 'none'
                   }}
                 >
-                  Name <SortIcon field="name" />
+                  Name <SortIcon direction={sortDirection} field="name" sortField={sortField} />
                 </th>
                 <th style={{
-                  padding: '0.75rem 1rem',
-                  textAlign: 'left',
-                  fontWeight: '600',
-                  color: styles.text,
                   borderBottom: `1px solid ${styles.border}`,
-                  minWidth: '300px'
+                  color: styles.text,
+                  fontWeight: '600',
+                  minWidth: '300px',
+                  padding: '0.75rem 1rem',
+                  textAlign: 'left'
                 }}>
                   Description
                 </th>
                 <th
                   onClick={() => handleSort('enabled')}
                   style={{
+                    borderBottom: `1px solid ${styles.border}`,
+                    color: styles.text,
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    minWidth: '80px',
                     padding: '0.75rem 1rem',
                     textAlign: 'center',
-                    fontWeight: '600',
-                    color: styles.text,
-                    borderBottom: `1px solid ${styles.border}`,
-                    cursor: 'pointer',
-                    minWidth: '80px',
                     userSelect: 'none'
                   }}
                 >
-                  Enabled <SortIcon field="enabled" />
+                  Enabled <SortIcon direction={sortDirection} field="enabled" sortField={sortField} />
                 </th>
                 <th
                   onClick={() => handleSort('rolloutPercentage')}
                   style={{
+                    borderBottom: `1px solid ${styles.border}`,
+                    color: styles.text,
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    minWidth: '120px',
                     padding: '0.75rem 1rem',
                     textAlign: 'center',
-                    fontWeight: '600',
-                    color: styles.text,
-                    borderBottom: `1px solid ${styles.border}`,
-                    cursor: 'pointer',
-                    minWidth: '120px',
                     userSelect: 'none'
                   }}
                 >
-                  Rollout % <SortIcon field="rolloutPercentage" />
+                  Rollout % <SortIcon direction={sortDirection} field="rolloutPercentage" sortField={sortField} />
                 </th>
                 <th style={{
-                  padding: '0.75rem 1rem',
-                  textAlign: 'center',
-                  fontWeight: '600',
-                  color: styles.text,
                   borderBottom: `1px solid ${styles.border}`,
-                  minWidth: '100px'
+                  color: styles.text,
+                  fontWeight: '600',
+                  minWidth: '100px',
+                  padding: '0.75rem 1rem',
+                  textAlign: 'center'
                 }}>
                   Variants
                 </th>
                 <th style={{
-                  padding: '0.75rem 1rem',
-                  textAlign: 'left',
-                  fontWeight: '600',
-                  color: styles.text,
                   borderBottom: `1px solid ${styles.border}`,
-                  minWidth: '150px'
+                  color: styles.text,
+                  fontWeight: '600',
+                  minWidth: '150px',
+                  padding: '0.75rem 1rem',
+                  textAlign: 'left'
                 }}>
                   Tags
                 </th>
                 <th
                   onClick={() => handleSort('updatedAt')}
                   style={{
+                    borderBottom: `1px solid ${styles.border}`,
+                    color: styles.text,
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    minWidth: '150px',
                     padding: '0.75rem 1rem',
                     textAlign: 'left',
-                    fontWeight: '600',
-                    color: styles.text,
-                    borderBottom: `1px solid ${styles.border}`,
-                    cursor: 'pointer',
-                    minWidth: '150px',
                     userSelect: 'none'
                   }}
                 >
-                  Last Updated <SortIcon field="updatedAt" />
+                  Last Updated <SortIcon direction={sortDirection} field="updatedAt" sortField={sortField} />
                 </th>
               </tr>
             </thead>
@@ -481,58 +486,58 @@ const FeatureFlagsClientComponent = ({
               {filteredAndSortedFlags.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{
+                    color: styles.textMuted,
                     padding: '2rem',
-                    textAlign: 'center',
-                    color: styles.textMuted
+                    textAlign: 'center'
                   }}>
                     {debouncedSearch ? 'No flags match your search' : 'No feature flags yet'}
                   </td>
                 </tr>
               ) : (
                 filteredAndSortedFlags.map(flag => (
-                  <tr key={flag.id} style={{
+                  <tr key={flag.id} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = styles.surfaceHover}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
+                  style={{
                     borderBottom: `1px solid ${styles.border}`,
                     transition: 'background-color 0.15s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = styles.surfaceHover}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
                   >
                     <td style={{
-                      padding: '0.75rem 1rem',
-                      position: 'sticky',
+                      backgroundColor: 'inherit',
                       left: 0,
-                      backgroundColor: 'inherit'
+                      padding: '0.75rem 1rem',
+                      position: 'sticky'
                     }}>
                       <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
                         backgroundColor: flag.enabled ?
                           (flag.rolloutPercentage && flag.rolloutPercentage < 100 ? styles.warning : styles.primary)
-                          : styles.error
+                          : styles.error,
+                        borderRadius: '50%',
+                        height: '8px',
+                        width: '8px'
                       }} />
                     </td>
                     <td style={{
-                      padding: '0.75rem 1rem',
+                      color: styles.text,
                       fontWeight: '500',
-                      color: styles.text
+                      padding: '0.75rem 1rem'
                     }}>
                       <a
                         href={`${config.routes.admin}/collections/${collectionSlug}/${flag.id}`}
-                        style={{
-                          color: styles.info,
-                          textDecoration: 'none',
-                          cursor: 'pointer'
-                        }}
                         onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
                         onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                        style={{
+                          color: styles.info,
+                          cursor: 'pointer',
+                          textDecoration: 'none'
+                        }}
                       >
                         {flag.name}
                       </a>
                     </td>
                     <td style={{
-                      padding: '0.75rem 1rem',
-                      color: styles.textMuted
+                      color: styles.textMuted,
+                      padding: '0.75rem 1rem'
                     }}>
                       {flag.description || '-'}
                     </td>
@@ -541,61 +546,61 @@ const FeatureFlagsClientComponent = ({
                       textAlign: 'center'
                     }}>
                       <input
-                        type="checkbox"
                         checked={flag.enabled}
-                        onChange={(e) => updateFlag(flag.id, { enabled: e.target.checked })}
                         disabled={!canUpdate || saving === flag.id}
+                        onChange={(e) => updateFlag(flag.id, { enabled: e.target.checked })}
                         style={{
-                          width: '18px',
-                          height: '18px',
-                          cursor: (!canUpdate || saving === flag.id) ? 'not-allowed' : 'pointer',
                           accentColor: styles.primary,
-                          opacity: canUpdate ? 1 : 0.6
+                          cursor: (!canUpdate || saving === flag.id) ? 'not-allowed' : 'pointer',
+                          height: '18px',
+                          opacity: canUpdate ? 1 : 0.6,
+                          width: '18px'
                         }}
+                        type="checkbox"
                       />
                     </td>
                     <td style={{
                       padding: '0.75rem 1rem',
                       textAlign: 'center'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                      <div style={{ alignItems: 'center', display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
                         <input
-                          type="number"
-                          value={flag.rolloutPercentage || 100}
+                          disabled={!canUpdate || saving === flag.id}
+                          max="100"
+                          min="0"
                           onChange={(e) => {
                             const value = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0))
-                            updateFlag(flag.id, { rolloutPercentage: Math.round(value) })
+                            void updateFlag(flag.id, { rolloutPercentage: Math.round(value) })
                           }}
-                          disabled={!canUpdate || saving === flag.id}
-                          min="0"
-                          max="100"
                           style={{
-                            width: '60px',
-                            padding: '0.25rem 0.5rem',
+                            backgroundColor: styles.inputBg,
                             border: `1px solid ${styles.inputBorder}`,
                             borderRadius: '0.25rem',
-                            fontSize: '0.875rem',
-                            textAlign: 'center',
+                            color: styles.text,
                             cursor: (!canUpdate || saving === flag.id) ? 'not-allowed' : 'text',
+                            fontSize: '0.875rem',
                             opacity: canUpdate ? 1 : 0.5,
-                            backgroundColor: styles.inputBg,
-                            color: styles.text
+                            padding: '0.25rem 0.5rem',
+                            textAlign: 'center',
+                            width: '60px'
                           }}
+                          type="number"
+                          value={flag.rolloutPercentage || 100}
                         />
                         <span style={{ color: styles.textMuted }}>%</span>
                       </div>
                     </td>
                     <td style={{
+                      color: styles.textMuted,
                       padding: '0.75rem 1rem',
-                      textAlign: 'center',
-                      color: styles.textMuted
+                      textAlign: 'center'
                     }}>
                       {flag.variants && flag.variants.length > 0 ? (
                         <span style={{
                           backgroundColor: styles.surface,
-                          padding: '0.25rem 0.5rem',
                           borderRadius: '0.25rem',
-                          fontSize: '0.75rem'
+                          fontSize: '0.75rem',
+                          padding: '0.25rem 0.5rem'
                         }}>
                           {flag.variants.length} variants
                         </span>
@@ -605,14 +610,14 @@ const FeatureFlagsClientComponent = ({
                       padding: '0.75rem 1rem'
                     }}>
                       {flag.tags && flag.tags.length > 0 ? (
-                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
                           {flag.tags.map((t, i) => (
                             <span key={i} style={{
                               backgroundColor: styles.info + '20',
-                              color: styles.info,
-                              padding: '0.125rem 0.5rem',
                               borderRadius: '0.25rem',
-                              fontSize: '0.75rem'
+                              color: styles.info,
+                              fontSize: '0.75rem',
+                              padding: '0.125rem 0.5rem'
                             }}>
                               {t.tag}
                             </span>
@@ -621,9 +626,9 @@ const FeatureFlagsClientComponent = ({
                       ) : '-'}
                     </td>
                     <td style={{
-                      padding: '0.75rem 1rem',
                       color: styles.textMuted,
-                      fontSize: '0.75rem'
+                      fontSize: '0.75rem',
+                      padding: '0.75rem 1rem'
                     }}>
                       {new Date(flag.updatedAt).toLocaleDateString()} {new Date(flag.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
@@ -637,11 +642,11 @@ const FeatureFlagsClientComponent = ({
 
       {/* Summary Stats */}
       <div style={{
-        marginTop: '2rem',
+        color: styles.textMuted,
         display: 'flex',
-        gap: '2rem',
         fontSize: '0.875rem',
-        color: styles.textMuted
+        gap: '2rem',
+        marginTop: '2rem'
       }}>
         <div>
           <span style={{ fontWeight: '600' }}>Total:</span> {flags.filter(f => f && f.name).length} flags

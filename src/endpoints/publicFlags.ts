@@ -15,12 +15,12 @@ export const MAX_PUBLIC_FLAG_NAMES = 100
  * descriptions and tags stay private.
  */
 export interface PublicFeatureFlag {
-  name: string
   enabled: boolean
-  /** Variant for `userId`; present only when a `userId` was sent. */
-  variant?: string | null
   /** Whether `userId` falls inside the rollout; present only when a `userId` was sent. */
   inRollout?: boolean
+  name: string
+  /** Variant for `userId`; present only when a `userId` was sent. */
+  variant?: null | string
 }
 
 export interface PublicFeatureFlagsResponse {
@@ -43,7 +43,7 @@ export function resolveRollout(
 /**
  * Same weighted selection as `getUserVariant` in the RSC helpers.
  */
-export function resolveVariant(flagName: string, userId: string, enabled: boolean, variants: unknown): string | null {
+export function resolveVariant(flagName: string, userId: string, enabled: boolean, variants: unknown): null | string {
   return enabled ? selectVariantForUser(flagName, userId, variants) : null
 }
 
@@ -74,8 +74,6 @@ function readUserId(req: PayloadRequest): string | undefined {
  */
 export function createPublicFlagsEndpoint(collectionSlug: string): Endpoint {
   return {
-    path: PUBLIC_FLAGS_PATH,
-    method: 'get',
     handler: async (req) => {
       const names = readNames(req)
       if (names.length === 0) {
@@ -92,12 +90,12 @@ export function createPublicFlagsEndpoint(collectionSlug: string): Endpoint {
       try {
         const result = await req.payload.find({
           collection: collectionSlug,
-          where: { name: { in: names } },
-          limit: names.length,
           depth: 0,
-          pagination: false,
+          limit: names.length,
           overrideAccess: true,
+          pagination: false,
           req,
+          where: { name: { in: names } },
         })
 
         const docsByName = new Map<string, Record<string, unknown>>()
@@ -130,5 +128,7 @@ export function createPublicFlagsEndpoint(collectionSlug: string): Endpoint {
         return Response.json({ error: 'Could not read feature flags.' }, { status: 500 })
       }
     },
+    method: 'get',
+    path: PUBLIC_FLAGS_PATH,
   }
 }

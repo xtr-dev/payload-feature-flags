@@ -30,5 +30,4 @@ jobs:
       dry-run: ${{ inputs.dry-run }}
       release-as: ${{ inputs.release-as }}
       preid: ${{ inputs.preid }}
-      # pnpm lint is broken on main (eslint.config.js imports @eslint/js, which is not installed); add it back once fixed.
-      check: pnpm test
+      check: pnpm test && pnpm lint

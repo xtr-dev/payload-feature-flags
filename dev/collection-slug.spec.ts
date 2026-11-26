@@ -26,22 +26,22 @@ describe('config.custom collection slug', () => {
     } as unknown as Config)
 
     expect(config.custom).toEqual({
-      host: true,
       [FEATURE_FLAGS_CUSTOM_KEY]: { collectionSlug: 'flags' },
+      host: true,
     })
   })
 
   test('the plugin merges into an existing entry under the same key', () => {
     const config = payloadFeatureFlags({ collectionOverrides: { slug: 'flags' } })({
       collections: [],
-      custom: { [FEATURE_FLAGS_CUSTOM_KEY]: { other: 'kept', collectionSlug: 'stale' } },
+      custom: { [FEATURE_FLAGS_CUSTOM_KEY]: { collectionSlug: 'stale', other: 'kept' } },
     } as unknown as Config)
 
-    expect(config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]).toEqual({ other: 'kept', collectionSlug: 'flags' })
+    expect(config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]).toEqual({ collectionSlug: 'flags', other: 'kept' })
   })
 
   test('the plugin records the slug when it is disabled', () => {
-    const config = payloadFeatureFlags({ disabled: true, collectionOverrides: { slug: 'flags' } })({
+    const config = payloadFeatureFlags({ collectionOverrides: { slug: 'flags' }, disabled: true })({
       collections: [],
     } as unknown as Config)
 

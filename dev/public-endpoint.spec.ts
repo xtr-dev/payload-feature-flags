@@ -12,13 +12,13 @@ const storedFlags = [
     name: 'new-homepage',
     description: 'secret description',
     enabled: true,
+    metadata: { owner: 'growth' },
     rolloutPercentage: 50,
+    tags: [{ tag: 'internal' }],
     variants: [
-      { name: 'control', weight: 50, metadata: { secret: true } },
+      { name: 'control', metadata: { secret: true }, weight: 50 },
       { name: 'variant-a', weight: 50 },
     ],
-    tags: [{ tag: 'internal' }],
-    metadata: { owner: 'growth' },
   },
   { id: 2, name: 'disabled-flag', enabled: false, rolloutPercentage: 100, variants: [] },
 ]
@@ -39,10 +39,10 @@ const makeReq = (query: string) => {
     docs: storedFlags.filter((flag) => where.name.in.includes(flag.name)),
   }))
   const req = {
-    url: `http://localhost/api/feature-flags/evaluate${query}`,
     payload: { find, logger: { error: vi.fn() } },
+    url: `http://localhost/api/feature-flags/evaluate${query}`,
   } as unknown as PayloadRequest
-  return { req, find }
+  return { find, req }
 }
 
 describe('publicEndpoint option', () => {
@@ -51,10 +51,10 @@ describe('publicEndpoint option', () => {
   })
 
   test('adds the endpoint and keeps endpoints from collectionOverrides', () => {
-    const hostEndpoint: Endpoint = { path: '/host', method: 'get', handler: () => Response.json({}) }
+    const hostEndpoint: Endpoint = { handler: () => Response.json({}), method: 'get', path: '/host' }
     const config = applyPlugin({
-      publicEndpoint: true,
       collectionOverrides: { slug: 'flags', endpoints: [hostEndpoint] },
+      publicEndpoint: true,
     })
 
     const endpoints = flagsCollection(config, 'flags').endpoints as Endpoint[]
@@ -62,9 +62,9 @@ describe('publicEndpoint option', () => {
   })
 
   test('is not added when the plugin is disabled or overrides set endpoints to false', () => {
-    expect(findEndpoint(applyPlugin({ publicEndpoint: true, disabled: true }))).toBeUndefined()
+    expect(findEndpoint(applyPlugin({ disabled: true, publicEndpoint: true }))).toBeUndefined()
     expect(
-      flagsCollection(applyPlugin({ publicEndpoint: true, collectionOverrides: { endpoints: false } }))
+      flagsCollection(applyPlugin({ collectionOverrides: { endpoints: false }, publicEndpoint: true }))
         .endpoints,
     ).toBe(false)
   })
@@ -74,14 +74,14 @@ describe('public endpoint handler', () => {
   const handler = findEndpoint(applyPlugin({ publicEndpoint: true }))!.handler
 
   test('returns only name and enabled for every named flag, bypassing collection access', async () => {
-    const { req, find } = makeReq('?names=new-homepage,disabled-flag,missing')
+    const { find, req } = makeReq('?names=new-homepage,disabled-flag,missing')
     const response = await handler(req)
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       flags: {
-        'new-homepage': { name: 'new-homepage', enabled: true },
         'disabled-flag': { name: 'disabled-flag', enabled: false },
+        'new-homepage': { name: 'new-homepage', enabled: true },
         // A missing flag is answered like a disabled one, so existence cannot be probed
         missing: { name: 'missing', enabled: false },
       },
@@ -108,14 +108,14 @@ describe('public endpoint handler', () => {
       expect(body.flags['new-homepage']).toEqual({
         name: 'new-homepage',
         enabled: true,
-        variant: await getUserVariant('new-homepage', userId, serverPayload),
         inRollout: await isUserInRollout('new-homepage', userId, serverPayload),
+        variant: await getUserVariant('new-homepage', userId, serverPayload),
       })
       expect(body.flags['disabled-flag']).toEqual({
         name: 'disabled-flag',
         enabled: false,
-        variant: null,
         inRollout: false,
+        variant: null,
       })
     }
   })
@@ -130,7 +130,7 @@ describe('public endpoint handler', () => {
   })
 
   test('rejects a request without names', async () => {
-    const { req, find } = makeReq('')
+    const { find, req } = makeReq('')
     const response = await handler(req)
 
     expect(response.status).toBe(400)
@@ -142,7 +142,7 @@ describe('buildPublicFlagsURL', () => {
   test('encodes names and userId', () => {
     expect(
       buildPublicFlagsURL(
-        { serverURL: 'https://example.com', apiPath: '/api', collectionSlug: 'feature-flags' },
+        { apiPath: '/api', collectionSlug: 'feature-flags', serverURL: 'https://example.com' },
         ['a b', 'c&d'],
         'user 1',
       ),
