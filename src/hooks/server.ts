@@ -4,6 +4,8 @@ import { cache } from "react"
 import type { FeatureFlagsCache } from '../cache.js'
 import { FeatureFlag, toFeatureFlag } from '../utils/mappers.js'
 
+import { isUserInRolloutBucket, selectVariantForUser } from '../bucketing.js'
+
 // Must match FEATURE_FLAGS_CUSTOM_KEY in src/index.ts. Duplicated rather than
 // imported so the RSC entry point does not pull in the plugin config module.
 const FEATURE_FLAGS_CUSTOM_KEY = 'payloadFeatureFlags'
@@ -135,16 +137,7 @@ export const isUserInRollout = cache(async (
     return false
   }
 
-  if (!flag.rolloutPercentage || flag.rolloutPercentage === 100) {
-    return true
-  }
-
-  // Simple hash function for consistent user bucketing
-  const hash = userId.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0)
-  }, 0)
-
-  return (Math.abs(hash) % 100) < flag.rolloutPercentage
+  return isUserInRolloutBucket(flagName, userId, flag.rolloutPercentage)
 })
 
 /**
@@ -161,22 +154,7 @@ export const getUserVariant = cache(async (
     return null
   }
 
-  // Hash the user ID for consistent variant assignment
-  const hash = Math.abs(userId.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0)
-  }, 0))
-
-  const bucket = hash % 100
-  let cumulative = 0
-
-  for (const variant of flag.variants) {
-    cumulative += variant.weight
-    if (bucket < cumulative) {
-      return variant.name
-    }
-  }
-
-  return flag.variants[0]?.name || null
+  return selectVariantForUser(flagName, userId, flag.variants)
 })
 
 /**

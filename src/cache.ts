@@ -63,6 +63,25 @@ function loadNextCache(): Promise<NextCacheModule | null> {
 }
 
 /**
+ * Profile passed to `revalidateTag` so cached flags expire right away, which is
+ * what the one-argument form did. Next.js 16 deprecates the one-argument form;
+ * its documented replacement `'max'` is stale-while-revalidate, which would
+ * serve the old flag value to the first request after a change, and
+ * `updateTag` only works inside Server Actions, not in Payload hooks.
+ */
+const REVALIDATE_TAG_PROFILE = { expire: 0 } as const
+
+/**
+ * Calls `revalidateTag(tag, { expire: 0 })`. Next.js 15 declares a single
+ * parameter and ignores the second argument at runtime, so the same call
+ * works on Next.js 15 and 16; the cast lets it type-check against either.
+ */
+function revalidateTagNow(next: NextCacheModule, tag: string): void {
+  const revalidateTag = next.revalidateTag as (tag: string, profile?: { expire?: number }) => void
+  revalidateTag(tag, REVALIDATE_TAG_PROFILE)
+}
+
+/**
  * True for the error next's `revalidateTag` throws when there is no request
  * context ("Invariant: static generation store missing in revalidateTag ...").
  * Other errors, such as Next's DynamicServerError during a render, are
@@ -115,7 +134,7 @@ export function createNextCache(options: NextCacheOptions = {}): FeatureFlagsCac
         return
       }
       try {
-        next.revalidateTag(tag)
+        revalidateTagNow(next, tag)
         return
       } catch (error) {
         if (!isMissingRequestContextError(error)) {

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/@xtr-dev/changelog/schema/config.schema.json",
+  "bumpMode": "semver",
+  "bumpMinorPreMajor": true,
+  "bumpMap": {
+    "feat": "minor",
+    "fix": "patch",
+    "perf": "patch",
+    "refactor": "patch",
+    "revert": "patch",
+    "security": "patch",
+    "deps": "patch"
+  },
+  "groups": [
+    { "title": "Features", "key": "features", "types": ["feat"] },
+    { "title": "Fixes", "key": "fixes", "types": ["fix", "perf", "security", "revert"] },
+    { "title": "Other", "key": "other", "types": ["refactor", "deps", "docs", "style", "test", "build", "ci", "chore", "a11y", "i18n"] }
+  ],
+  "output": {
+    "versionsJson": { "path": "changelog/versions.json", "archivePath": "changelog/archive.json", "archiveAfter": 10 },
+    "markdown": { "path": "CHANGELOG.md", "preamble": "" },
+    "packageJson": { "path": "package.json" }
+  }
+}

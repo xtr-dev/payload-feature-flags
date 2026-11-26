@@ -1,8 +1,16 @@
 {
   "name": "@xtr-dev/payload-feature-flags",
-  "version": "0.0.22",
+  "version": "0.2.0",
   "description": "Feature flags plugin for Payload CMS - manage feature toggles, A/B tests, and gradual rollouts",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xtr-dev/payload-feature-flags.git"
+  },
+  "homepage": "https://github.com/xtr-dev/payload-feature-flags#readme",
+  "bugs": {
+    "url": "https://github.com/xtr-dev/payload-feature-flags/issues"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -46,12 +54,13 @@
     "lint": "eslint",
     "lint:fix": "eslint ./src --fix",
     "prepublishOnly": "pnpm clean && pnpm build",
-    "test": "exit 0",
+    "test": "pnpm test:int",
     "test:e2e": "playwright test",
-    "test:int": "vitest"
+    "test:int": "vitest run"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "9.35.0",
     "@payloadcms/db-mongodb": "3.56.0",
     "@payloadcms/db-postgres": "3.56.0",
     "@payloadcms/db-sqlite": "3.56.0",

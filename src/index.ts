@@ -12,6 +12,7 @@ export type CollectionOverrides = Partial<
 // Export shared types for users of the plugin
 export type { PublicFeatureFlag, PublicFeatureFlagsResponse } from './endpoints/publicFlags.js'
 export { createNextCache, DEFAULT_CACHE_TAG } from './cache.js'
+export { isUserInRolloutBucket, selectVariantForUser } from './bucketing.js'
 export type { FeatureFlagsCache, NextCacheOptions } from './cache.js'
 export type { PayloadID, FeatureFlag } from './types/index.js'
 
@@ -330,9 +331,17 @@ export const payloadFeatureFlags =
       config.admin.components.views = {}
     }
 
-    // Add custom feature flags overview view
+    // Add custom feature flags overview view. This is a root admin view, not a
+    // collection view, so Payload never supplies user/permissions/collectionConfig
+    // on its props (only /admin/collections/:slug routes get those) - collectionSlug
+    // is threaded through via Component.serverProps so FeatureFlagsOverviewView can
+    // derive the same values from initPageResult instead. See FeatureFlagsOverviewView.tsx.
     config.admin.components.views['feature-flags-overview'] = {
-      Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView',
+      Component: {
+        path: '@xtr-dev/payload-feature-flags/views',
+        exportName: 'FeatureFlagsOverviewView',
+        serverProps: { collectionSlug },
+      },
       path: '/feature-flags-overview',
     }
 
