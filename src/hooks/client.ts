@@ -17,6 +17,54 @@ export interface FeatureFlagOptions {
   serverURL?: string
   apiPath?: string
   collectionSlug?: string
+  /**
+   * Where the hooks read flags from.
+   * - `'collection'` (default): Payload's REST API for the collection. The
+   *   collection's `read` access must allow the visitor, and the hooks get the
+   *   whole flag (rollout percentage, variants, metadata).
+   * - `'public'`: the plugin's public endpoint (enable it with the plugin's
+   *   `publicEndpoint` option). It returns only the name and enabled state,
+   *   with variant and rollout resolved on the server, so `read` can stay
+   *   closed.
+   */
+  source?: 'collection' | 'public'
+}
+
+/** Shape of one flag in the public endpoint's response. */
+interface PublicFlagResponse {
+  name: string
+  enabled: boolean
+  variant?: string | null
+  inRollout?: boolean
+}
+
+/**
+ * URL of the plugin's public endpoint for the given flag names, optionally
+ * resolving variant and rollout for `userId`.
+ */
+export function buildPublicFlagsURL(
+  config: { serverURL: string; apiPath: string; collectionSlug: string },
+  names: string[],
+  userId?: string,
+): string {
+  const params = new URLSearchParams({ names: names.join(',') })
+  if (userId !== undefined) {
+    params.set('userId', userId)
+  }
+  return `${config.serverURL}${config.apiPath}/${config.collectionSlug}/evaluate?${params.toString()}`
+}
+
+async function fetchPublicFlags(
+  config: { serverURL: string; apiPath: string; collectionSlug: string },
+  names: string[],
+  userId?: string,
+): Promise<Record<string, PublicFlagResponse>> {
+  const response = await fetch(buildPublicFlagsURL(config, names, userId))
+  if (!response.ok) {
+    throw new Error(`Failed to fetch feature flags: ${response.statusText}`)
+  }
+  const result = await response.json()
+  return result && typeof result.flags === 'object' && result.flags !== null ? result.flags : {}
 }
 
 // Helper to get config from options or defaults
@@ -61,6 +109,7 @@ export function useFeatureFlags(
   refetch: () => Promise<void>
 } {
   const { serverURL, apiPath, collectionSlug } = getConfig(options)
+  const source = options?.source ?? 'collection'
   const [flags, setFlags] = useState<Partial<FeatureFlag>[]>(initialFlags)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -78,8 +127,23 @@ export function useFeatureFlags(
       setLoading(true)
       setError(null)
 
+      const names = initialFlagsRef.current.map(f => f.name).filter((name): name is string => Boolean(name))
+
+      if (source === 'public') {
+        // The public endpoint only answers for named flags.
+        if (names.length === 0) {
+          setFlags(initialFlagsRef.current)
+          return
+        }
+        const publicFlags = await fetchPublicFlags({ serverURL, apiPath, collectionSlug }, names)
+        setFlags(initialFlagsRef.current.map(initialFlag => {
+          const fetched = initialFlag.name ? publicFlags[initialFlag.name] : undefined
+          return fetched ? { name: fetched.name, enabled: fetched.enabled } : initialFlag
+        }))
+        return
+      }
+
       // Use Payload's native collection API
-      const names = initialFlagsRef.current.map(f => f.name).filter(Boolean)
       const query = names.length > 0
         ? `?where[name][in]=${names.join(',')}&limit=1000`
         : '?limit=1000'
@@ -120,7 +184,7 @@ export function useFeatureFlags(
     } finally {
       setLoading(false)
     }
-  }, [serverURL, apiPath, collectionSlug]) // Remove initialFlags from dependencies
+  }, [serverURL, apiPath, collectionSlug, source]) // Remove initialFlags from dependencies
 
   useEffect(() => {
     void fetchFlags()
@@ -149,20 +213,31 @@ export function useFeatureFlag(
   return { isEnabled, flag, loading, error }
 }
 
-/**
- * Hook to fetch a specific feature flag from the API
- */
-export function useSpecificFeatureFlag(
-  flagName: string,
-  options?: FeatureFlagOptions
-): {
+interface SingleFlagState {
   flag: FeatureFlag | null
+  /** Server-resolved variant; only set when reading from the public endpoint with a userId. */
+  variant?: string | null
+  /** Server-resolved rollout result; only set when reading from the public endpoint with a userId. */
+  inRollout?: boolean
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
-} {
+}
+
+/**
+ * Fetches one flag from the configured source. With `source: 'public'` and a
+ * `userId`, the endpoint also resolves the variant and rollout for that user.
+ */
+function useSingleFeatureFlag(
+  flagName: string,
+  options: FeatureFlagOptions | undefined,
+  userId?: string,
+): SingleFlagState {
   const { serverURL, apiPath, collectionSlug } = getConfig(options)
+  const source = options?.source ?? 'collection'
   const [flag, setFlag] = useState<FeatureFlag | null>(null)
+  const [variant, setVariant] = useState<string | null | undefined>(undefined)
+  const [inRollout, setInRollout] = useState<boolean | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -170,6 +245,22 @@ export function useSpecificFeatureFlag(
     try {
       setLoading(true)
       setError(null)
+
+      if (source === 'public') {
+        const publicFlags = await fetchPublicFlags({ serverURL, apiPath, collectionSlug }, [flagName], userId)
+        const fetched = publicFlags[flagName]
+        if (fetched) {
+          setFlag({ name: fetched.name, enabled: fetched.enabled })
+          setVariant(fetched.variant)
+          setInRollout(fetched.inRollout)
+        } else {
+          setFlag(null)
+          setVariant(undefined)
+          setInRollout(undefined)
+          setError(`Feature flag '${flagName}' not found`)
+        }
+        return
+      }
 
       // Use Payload's native collection API with query filter
       const response = await fetch(
@@ -202,13 +293,29 @@ export function useSpecificFeatureFlag(
     } finally {
       setLoading(false)
     }
-  }, [serverURL, apiPath, collectionSlug, flagName])
+  }, [serverURL, apiPath, collectionSlug, flagName, source, userId])
 
   useEffect(() => {
     void fetchFlag()
   }, [fetchFlag])
 
-  return { flag, loading, error, refetch: fetchFlag }
+  return { flag, variant, inRollout, loading, error, refetch: fetchFlag }
+}
+
+/**
+ * Hook to fetch a specific feature flag from the API
+ */
+export function useSpecificFeatureFlag(
+  flagName: string,
+  options?: FeatureFlagOptions
+): {
+  flag: FeatureFlag | null
+  loading: boolean
+  error: string | null
+  refetch: () => Promise<void>
+} {
+  const { flag, loading, error, refetch } = useSingleFeatureFlag(flagName, options)
+  return { flag, loading, error, refetch }
 }
 
 /**
@@ -224,11 +331,16 @@ export function useVariantSelection(
   loading: boolean
   error: string | null
 } {
-  const { flag, loading, error } = useSpecificFeatureFlag(flagName, options)
+  const state = useSingleFeatureFlag(flagName, options, options?.source === 'public' ? userId : undefined)
+  const { flag, loading, error } = state
 
-  const variant = flag?.enabled && flag.variants
-    ? selectVariantForUser(userId, flag.variants)
-    : null
+  // The public endpoint resolves the variant on the server; the collection
+  // source returns the variants, so the client picks one itself.
+  const variant = options?.source === 'public'
+    ? (state.variant ?? null)
+    : flag?.enabled && flag.variants
+      ? selectVariantForUser(userId, flag.variants)
+      : null
 
   return { variant, flag, loading, error }
 }
@@ -246,11 +358,16 @@ export function useRolloutCheck(
   loading: boolean
   error: string | null
 } {
-  const { flag, loading, error } = useSpecificFeatureFlag(flagName, options)
+  const state = useSingleFeatureFlag(flagName, options, options?.source === 'public' ? userId : undefined)
+  const { flag, loading, error } = state
 
-  const isInRollout = flag?.enabled
-    ? checkUserInRollout(userId, flag.rolloutPercentage || 100)
-    : false
+  // The public endpoint resolves the rollout on the server; the collection
+  // source returns the percentage, so the client checks it itself.
+  const isInRollout = options?.source === 'public'
+    ? (state.inRollout ?? false)
+    : flag?.enabled
+      ? checkUserInRollout(userId, flag.rolloutPercentage || 100)
+      : false
 
   return { isInRollout, flag, loading, error }
 }

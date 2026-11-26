@@ -1,0 +1,20 @@
+name: PR
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+jobs:
+  title:
+    uses: xtr-dev/.github/.github/workflows/pr-title.yml@v1
+
+  claude-review:
+    # Title edits re-run the title check only, not the review.
+    if: github.event.action != 'edited'
+    uses: xtr-dev/.github/.github/workflows/claude-review.yml@v1
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    secrets: inherit
