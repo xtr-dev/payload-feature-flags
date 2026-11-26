@@ -48,3 +48,6 @@ yarn-error.log*
 /blob-report/
 /playwright/.cache/
 /dev.db
+
+# pnpm is the package manager; keep npm lockfiles out
+package-lock.json
