@@ -60,6 +60,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "9.35.0",
     "@payloadcms/db-mongodb": "3.56.0",
     "@payloadcms/db-postgres": "3.56.0",
     "@payloadcms/db-sqlite": "3.56.0",
