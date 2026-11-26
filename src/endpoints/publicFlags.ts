@@ -1,5 +1,7 @@
 import type { Endpoint, PayloadRequest } from 'payload'
 
+import { isUserInRolloutBucket, selectVariantForUser } from '../bucketing.js'
+
 /** Path of the public endpoint, relative to the feature flags collection. */
 export const PUBLIC_FLAGS_PATH = '/evaluate'
 
@@ -25,45 +27,24 @@ export interface PublicFeatureFlagsResponse {
   flags: Record<string, PublicFeatureFlag>
 }
 
-function hashUserId(userId: string): number {
-  return Math.abs(
-    userId.split('').reduce((acc, char) => ((acc << 5) - acc) + char.charCodeAt(0), 0),
-  )
-}
-
 /**
  * Same bucketing as `isUserInRollout` in the RSC helpers, so a user gets the
  * same answer from the server helpers and from the public endpoint.
  */
-export function resolveRollout(userId: string, enabled: boolean, rolloutPercentage: unknown): boolean {
-  if (!enabled) {
-    return false
-  }
-  if (typeof rolloutPercentage !== 'number' || !rolloutPercentage || rolloutPercentage === 100) {
-    return true
-  }
-  return hashUserId(userId) % 100 < rolloutPercentage
+export function resolveRollout(
+  flagName: string,
+  userId: string,
+  enabled: boolean,
+  rolloutPercentage: unknown,
+): boolean {
+  return enabled && isUserInRolloutBucket(flagName, userId, rolloutPercentage)
 }
 
 /**
  * Same weighted selection as `getUserVariant` in the RSC helpers.
  */
-export function resolveVariant(userId: string, enabled: boolean, variants: unknown): string | null {
-  if (!enabled || !Array.isArray(variants) || variants.length === 0) {
-    return null
-  }
-
-  const bucket = hashUserId(userId) % 100
-  let cumulative = 0
-  for (const variant of variants as Array<{ name?: unknown; weight?: unknown }>) {
-    cumulative += typeof variant?.weight === 'number' ? variant.weight : 0
-    if (bucket < cumulative) {
-      return typeof variant.name === 'string' ? variant.name : null
-    }
-  }
-
-  const first = (variants[0] as { name?: unknown } | undefined)?.name
-  return typeof first === 'string' ? first : null
+export function resolveVariant(flagName: string, userId: string, enabled: boolean, variants: unknown): string | null {
+  return enabled ? selectVariantForUser(flagName, userId, variants) : null
 }
 
 /** Reads `names` (comma separated, or repeated) from the query string. */
@@ -136,8 +117,8 @@ export function createPublicFlagsEndpoint(collectionSlug: string): Endpoint {
           const enabled = doc?.enabled === true
           const flag: PublicFeatureFlag = { name, enabled }
           if (userId !== undefined) {
-            flag.variant = resolveVariant(userId, enabled, doc?.variants)
-            flag.inRollout = resolveRollout(userId, enabled, doc?.rolloutPercentage)
+            flag.variant = resolveVariant(name, userId, enabled, doc?.variants)
+            flag.inRollout = resolveRollout(name, userId, enabled, doc?.rolloutPercentage)
           }
           flags[name] = flag
         }

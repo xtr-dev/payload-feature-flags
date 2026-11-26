@@ -12,6 +12,7 @@ export type CollectionOverrides = Partial<
 // Export shared types for users of the plugin
 export type { PublicFeatureFlag, PublicFeatureFlagsResponse } from './endpoints/publicFlags.js'
 export { createNextCache, DEFAULT_CACHE_TAG } from './cache.js'
+export { isUserInRolloutBucket, selectVariantForUser } from './bucketing.js'
 export type { FeatureFlagsCache, NextCacheOptions } from './cache.js'
 export type { PayloadID, FeatureFlag } from './types/index.js'
 

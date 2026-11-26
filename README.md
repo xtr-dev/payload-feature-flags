@@ -489,57 +489,26 @@ if (await checkFeature('new-dashboard')) {
 }
 ```
 
-### Implementing Gradual Rollouts
+### Implementing Gradual Rollouts and A/B Tests
+
+Use the plugin's bucketing helpers (also exported from `@xtr-dev/payload-feature-flags/client`) so your own code puts users in the same buckets as the server helpers and hooks:
 
 ```typescript
-// Example: Hash-based rollout
-function isUserInRollout(userId: string, percentage: number): boolean {
-  // Simple hash function for consistent user bucketing
-  const hash = userId.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0)
-  }, 0)
-  
-  return (Math.abs(hash) % 100) < percentage
-}
+import { isUserInRolloutBucket, selectVariantForUser } from '@xtr-dev/payload-feature-flags'
 
-// Check if user should see the feature
 const result = await fetch('/api/feature-flags?where[name][equals]=new-feature').then(r => r.json())
 const flag = result.docs[0]
-if (flag?.enabled && isUserInRollout(userId, flag.rolloutPercentage)) {
+
+// A missing rolloutPercentage means everyone; 0 means no one
+if (flag?.enabled && isUserInRolloutBucket(flag.name, userId, flag.rolloutPercentage)) {
   // Show feature to this user
 }
+
+// Weighted pick from flag.variants; null when the flag has no variants
+const variant = flag?.enabled ? selectVariantForUser(flag.name, userId, flag.variants) : null
 ```
 
-### A/B Testing with Variants
-
-```typescript
-// Example: Select variant based on user
-function selectVariant(userId: string, variants: Array<{name: string, weight: number}>) {
-  const hash = Math.abs(userId.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0)
-  }, 0))
-  
-  const bucket = hash % 100
-  let cumulative = 0
-  
-  for (const variant of variants) {
-    cumulative += variant.weight
-    if (bucket < cumulative) {
-      return variant.name
-    }
-  }
-  
-  return variants[0]?.name || 'control'
-}
-
-// Usage
-const result = await fetch('/api/feature-flags?where[name][equals]=homepage-test').then(r => r.json())
-const flag = result.docs[0]
-if (flag?.enabled && flag.variants) {
-  const variant = selectVariant(userId, flag.variants)
-  // Render based on variant
-}
-```
+Buckets are derived from a hash of the flag name and the user ID, so each flag splits users independently: being in one flag's 10% rollout says nothing about another flag's, and rollout and variant assignment of the same flag are independent too.
 
 ## Performance Considerations
 
