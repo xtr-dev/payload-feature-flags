@@ -1,0 +1,34 @@
+# Manual release: Actions → Release → Run workflow.
+# Version and CHANGELOG.md are derived from conventional commits since the last tag.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Preview only (build and pack, publish nothing)
+        type: boolean
+        default: false
+      release-as:
+        description: Force this exact version (optional, e.g. 1.0.0)
+        type: string
+        default: ''
+      preid:
+        description: Pre-release identifier (optional, e.g. beta)
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    uses: xtr-dev/.github/.github/workflows/plugin-release.yml@v1
+    with:
+      dry-run: ${{ inputs.dry-run }}
+      release-as: ${{ inputs.release-as }}
+      preid: ${{ inputs.preid }}
+      # pnpm lint is broken on main (eslint.config.js imports @eslint/js, which is not installed); add it back once fixed.
+      check: pnpm test
