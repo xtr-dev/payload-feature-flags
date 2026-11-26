@@ -12,6 +12,9 @@ import { FEATURE_FLAGS_CUSTOM_KEY, payloadFeatureFlags } from '../src/index.js'
 const makeMemoryCache = () => {
   const store = new Map<string, unknown>()
   const cache: FeatureFlagsCache = {
+    invalidate: vi.fn(() => {
+      store.clear()
+    }),
     wrap: vi.fn(async <T>(key: string[], load: () => Promise<T>): Promise<T> => {
       const id = JSON.stringify(key)
       if (store.has(id)) {
@@ -20,9 +23,6 @@ const makeMemoryCache = () => {
       const value = await load()
       store.set(id, value)
       return value
-    }),
-    invalidate: vi.fn(() => {
-      store.clear()
     }),
   }
   return { cache, store }
@@ -52,7 +52,7 @@ const makePayload = (config: Config, docs: Array<Record<string, unknown>>) => {
     }
     return { docs: filtered.map((doc) => ({ ...doc })) }
   })
-  return { payload: { config, find } as unknown as Payload, find }
+  return { find, payload: { config, find } as unknown as Payload }
 }
 
 describe('cache option wiring', () => {
@@ -80,8 +80,8 @@ describe('cache option wiring', () => {
     )
 
     expect(config.custom).toEqual({
+      [FEATURE_FLAGS_CUSTOM_KEY]: { cache, collectionSlug: 'feature-flags' },
       host: true,
-      [FEATURE_FLAGS_CUSTOM_KEY]: { collectionSlug: 'feature-flags', cache },
     })
 
     const hooks = flagsCollection(config).hooks!
@@ -107,7 +107,7 @@ describe('cross-request caching in the RSC helpers', () => {
     const docs: Array<Record<string, unknown>> = [
       { id: 1, name: 'new-homepage', enabled: true, tags: [{ tag: 'home' }] },
     ]
-    const { payload, find } = makePayload(config, docs)
+    const { find, payload } = makePayload(config, docs)
 
     await expect(getFeatureFlag('new-homepage', payload)).resolves.toMatchObject({ enabled: true })
     await getFeatureFlag('new-homepage', payload)
@@ -131,7 +131,7 @@ describe('cross-request caching in the RSC helpers', () => {
   test('a failed lookup is not cached', async () => {
     const { cache, store } = makeMemoryCache()
     const config = applyPlugin({ cache })
-    const { payload, find } = makePayload(config, [{ id: 1, name: 'flag', enabled: true, tags: [] }])
+    const { find, payload } = makePayload(config, [{ id: 1, name: 'flag', enabled: true, tags: [] }])
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     find.mockRejectedValueOnce(new Error('database down'))
 
@@ -228,7 +228,7 @@ describe('createNextCache invalidation error handling', () => {
   test("the plugin's hook rethrows Next.js control-flow errors and logs others", async () => {
     const dynamicError = Object.assign(new Error('Dynamic server usage'), { digest: 'DYNAMIC_SERVER_USAGE' })
     const invalidate = vi.fn<() => Promise<void>>()
-    const config = applyPlugin({ cache: { wrap: (_key, load) => load(), invalidate } })
+    const config = applyPlugin({ cache: { invalidate, wrap: (_key, load) => load() } })
     const afterDelete = flagsCollection(config).hooks!.afterDelete!.at(-1)!
     const args = {} as Parameters<typeof afterDelete>[0]
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})

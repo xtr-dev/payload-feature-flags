@@ -60,18 +60,18 @@ export const seed = async (payload: Payload) => {
   if (postsExist === 0) {
     const samplePosts = [
       {
+        publishedAt: new Date().toISOString(),
+        status: 'published' as const,
         title: 'Welcome to Feature Flag Testing',
-        status: 'published' as const,
+      },
+      {
+        status: 'draft' as const, 
+        title: 'Beta Feature Showcase',
+      },
+      {
         publishedAt: new Date().toISOString(),
-      },
-      {
-        title: 'Beta Feature Showcase', 
-        status: 'draft' as const,
-      },
-      {
+        status: 'published' as const,
         title: 'A/B Test Content',
-        status: 'published' as const,
-        publishedAt: new Date().toISOString(),
       },
     ]
 
@@ -92,19 +92,19 @@ export const seed = async (payload: Payload) => {
   if (pagesExist === 0) {
     const samplePages = [
       {
-        title: 'Home',
         slug: 'home',
         layout: 'landing' as const,
+        title: 'Home',
       },
       {
-        title: 'About',
         slug: 'about',
         layout: 'default' as const,
+        title: 'About',
       },
       {
-        title: 'Beta Dashboard',
         slug: 'beta-dashboard',
         layout: 'sidebar' as const,
+        title: 'Beta Dashboard',
       },
     ]
 

@@ -1,15 +1,17 @@
 'use client'
-import React, { useCallback, useEffect, useState, useRef } from 'react'
-import { FeatureFlag, toFeatureFlag } from '../utils/mappers.js'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+
+import type { FeatureFlag} from '../utils/mappers.js';
 
 import { isUserInRolloutBucket, selectVariantForUser } from '../bucketing.js'
+import { toFeatureFlag } from '../utils/mappers.js'
 
 export type { FeatureFlag }
 
 export interface FeatureFlagOptions {
-  serverURL?: string
   apiPath?: string
   collectionSlug?: string
+  serverURL?: string
   /**
    * Where the hooks read flags from.
    * - `'collection'` (default): Payload's REST API for the collection. The
@@ -26,10 +28,10 @@ export interface FeatureFlagOptions {
 
 /** Shape of one flag in the public endpoint's response. */
 interface PublicFlagResponse {
-  name: string
   enabled: boolean
-  variant?: string | null
   inRollout?: boolean
+  name: string
+  variant?: null | string
 }
 
 /**
@@ -37,7 +39,7 @@ interface PublicFlagResponse {
  * resolving variant and rollout for `userId`.
  */
 export function buildPublicFlagsURL(
-  config: { serverURL: string; apiPath: string; collectionSlug: string },
+  config: { apiPath: string; collectionSlug: string; serverURL: string },
   names: string[],
   userId?: string,
 ): string {
@@ -49,7 +51,7 @@ export function buildPublicFlagsURL(
 }
 
 async function fetchPublicFlags(
-  config: { serverURL: string; apiPath: string; collectionSlug: string },
+  config: { apiPath: string; collectionSlug: string; serverURL: string },
   names: string[],
   userId?: string,
 ): Promise<Record<string, PublicFlagResponse>> {
@@ -66,27 +68,27 @@ function getConfig(options?: FeatureFlagOptions) {
   // Check if serverURL is explicitly provided
   if (options?.serverURL) {
     return {
-      serverURL: options.serverURL,
       apiPath: options.apiPath || '/api',
-      collectionSlug: options.collectionSlug || 'feature-flags'
+      collectionSlug: options.collectionSlug || 'feature-flags',
+      serverURL: options.serverURL
     }
   }
 
   // In browser environment, use window.location.origin
   if (typeof window !== 'undefined') {
     return {
-      serverURL: window.location.origin,
       apiPath: options?.apiPath || '/api',
-      collectionSlug: options?.collectionSlug || 'feature-flags'
+      collectionSlug: options?.collectionSlug || 'feature-flags',
+      serverURL: window.location.origin
     }
   }
 
   // During SSR or in non-browser environments, use relative URL
   // This will work for same-origin requests
   return {
-    serverURL: '',
     apiPath: options?.apiPath || '/api',
-    collectionSlug: options?.collectionSlug || 'feature-flags'
+    collectionSlug: options?.collectionSlug || 'feature-flags',
+    serverURL: ''
   }
 }
 
@@ -97,16 +99,16 @@ export function useFeatureFlags(
   initialFlags: Partial<FeatureFlag>[],
   options?: FeatureFlagOptions
 ): {
+  error: null | string
   flags: Partial<FeatureFlag>[]
   loading: boolean
-  error: string | null
   refetch: () => Promise<void>
 } {
-  const { serverURL, apiPath, collectionSlug } = getConfig(options)
+  const { apiPath, collectionSlug, serverURL } = getConfig(options)
   const source = options?.source ?? 'collection'
   const [flags, setFlags] = useState<Partial<FeatureFlag>[]>(initialFlags)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<null | string>(null)
 
   // Use ref to store initialFlags to avoid re-creating fetchFlags on every render
   const initialFlagsRef = useRef(initialFlags)
@@ -129,7 +131,7 @@ export function useFeatureFlags(
           setFlags(initialFlagsRef.current)
           return
         }
-        const publicFlags = await fetchPublicFlags({ serverURL, apiPath, collectionSlug }, names)
+        const publicFlags = await fetchPublicFlags({ apiPath, collectionSlug, serverURL }, names)
         setFlags(initialFlagsRef.current.map(initialFlag => {
           const fetched = initialFlag.name ? publicFlags[initialFlag.name] : undefined
           return fetched ? { name: fetched.name, enabled: fetched.enabled } : initialFlag
@@ -178,7 +180,7 @@ export function useFeatureFlags(
     void fetchFlags()
   }, [fetchFlags])
 
-  return { flags, loading, error, refetch: fetchFlags }
+  return { error, flags, loading, refetch: fetchFlags }
 }
 
 /**
@@ -188,28 +190,28 @@ export function useFeatureFlag(
   flagName: string,
   options?: FeatureFlagOptions
 ): {
+  error: null | string
+  flag: null | Partial<FeatureFlag>
   isEnabled: boolean
-  flag: Partial<FeatureFlag> | null
   loading: boolean
-  error: string | null
 } {
-  const { flags, loading, error } = useFeatureFlags([{ name: flagName }], options)
+  const { error, flags, loading } = useFeatureFlags([{ name: flagName }], options)
 
   const flag = flags.find(f => f.name === flagName) || null
   const isEnabled = flag?.enabled || false
 
-  return { isEnabled, flag, loading, error }
+  return { error, flag, isEnabled, loading }
 }
 
 interface SingleFlagState {
+  error: null | string
   flag: FeatureFlag | null
-  /** Server-resolved variant; only set when reading from the public endpoint with a userId. */
-  variant?: string | null
   /** Server-resolved rollout result; only set when reading from the public endpoint with a userId. */
   inRollout?: boolean
   loading: boolean
-  error: string | null
   refetch: () => Promise<void>
+  /** Server-resolved variant; only set when reading from the public endpoint with a userId. */
+  variant?: null | string
 }
 
 /**
@@ -221,13 +223,13 @@ function useSingleFeatureFlag(
   options: FeatureFlagOptions | undefined,
   userId?: string,
 ): SingleFlagState {
-  const { serverURL, apiPath, collectionSlug } = getConfig(options)
+  const { apiPath, collectionSlug, serverURL } = getConfig(options)
   const source = options?.source ?? 'collection'
   const [flag, setFlag] = useState<FeatureFlag | null>(null)
-  const [variant, setVariant] = useState<string | null | undefined>(undefined)
+  const [variant, setVariant] = useState<null | string | undefined>(undefined)
   const [inRollout, setInRollout] = useState<boolean | undefined>(undefined)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<null | string>(null)
 
   const fetchFlag = useCallback(async () => {
     try {
@@ -235,7 +237,7 @@ function useSingleFeatureFlag(
       setError(null)
 
       if (source === 'public') {
-        const publicFlags = await fetchPublicFlags({ serverURL, apiPath, collectionSlug }, [flagName], userId)
+        const publicFlags = await fetchPublicFlags({ apiPath, collectionSlug, serverURL }, [flagName], userId)
         const fetched = publicFlags[flagName]
         if (fetched) {
           setFlag({ name: fetched.name, enabled: fetched.enabled })
@@ -281,7 +283,7 @@ function useSingleFeatureFlag(
     void fetchFlag()
   }, [fetchFlag])
 
-  return { flag, variant, inRollout, loading, error, refetch: fetchFlag }
+  return { error, flag, inRollout, loading, refetch: fetchFlag, variant }
 }
 
 /**
@@ -291,13 +293,13 @@ export function useSpecificFeatureFlag(
   flagName: string,
   options?: FeatureFlagOptions
 ): {
+  error: null | string
   flag: FeatureFlag | null
   loading: boolean
-  error: string | null
   refetch: () => Promise<void>
 } {
-  const { flag, loading, error, refetch } = useSingleFeatureFlag(flagName, options)
-  return { flag, loading, error, refetch }
+  const { error, flag, loading, refetch } = useSingleFeatureFlag(flagName, options)
+  return { error, flag, loading, refetch }
 }
 
 /**
@@ -308,13 +310,13 @@ export function useVariantSelection(
   userId: string,
   options?: FeatureFlagOptions
 ): {
-  variant: string | null
+  error: null | string
   flag: FeatureFlag | null
   loading: boolean
-  error: string | null
+  variant: null | string
 } {
   const state = useSingleFeatureFlag(flagName, options, options?.source === 'public' ? userId : undefined)
-  const { flag, loading, error } = state
+  const { error, flag, loading } = state
 
   // The public endpoint resolves the variant on the server; the collection
   // source returns the variants, so the client picks one itself.
@@ -324,7 +326,7 @@ export function useVariantSelection(
       ? selectVariantForUser(flagName, userId, flag.variants)
       : null
 
-  return { variant, flag, loading, error }
+  return { error, flag, loading, variant }
 }
 
 /**
@@ -335,13 +337,13 @@ export function useRolloutCheck(
   userId: string,
   options?: FeatureFlagOptions
 ): {
-  isInRollout: boolean
+  error: null | string
   flag: FeatureFlag | null
+  isInRollout: boolean
   loading: boolean
-  error: string | null
 } {
   const state = useSingleFeatureFlag(flagName, options, options?.source === 'public' ? userId : undefined)
-  const { flag, loading, error } = state
+  const { error, flag, loading } = state
 
   // The public endpoint resolves the rollout on the server; the collection
   // source returns the percentage, so the client checks it itself.
@@ -351,7 +353,7 @@ export function useRolloutCheck(
       ? isUserInRolloutBucket(flagName, userId, flag.rolloutPercentage)
       : false
 
-  return { isInRollout, flag, loading, error }
+  return { error, flag, isInRollout, loading }
 }
 
 /**
@@ -365,7 +367,7 @@ export function withFeatureFlag<P extends Record<string, any>>(
   return function FeatureFlagWrapper(
     WrappedComponent: React.ComponentType<P>
   ): React.ComponentType<P> {
-    return function WithFeatureFlagComponent(props: P): React.ReactElement | null {
+    return function WithFeatureFlagComponent(props: P): null | React.ReactElement {
       const { isEnabled, loading } = useFeatureFlag(flagName, options)
 
       if (loading) {

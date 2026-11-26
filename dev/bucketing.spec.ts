@@ -5,11 +5,11 @@ import { describe, expect, test } from 'vitest'
 import { resolveRollout, resolveVariant } from '../src/endpoints/publicFlags.js'
 import { getUserVariant, isUserInRollout } from '../src/hooks/server.js'
 
-type StoredFlag = Record<string, unknown> & { name: string }
+type StoredFlag = { name: string } & Record<string, unknown>
 
 const makePayload = (docs: StoredFlag[]): Payload =>
   ({
-    config: { custom: { payloadFeatureFlags: { collectionSlug: 'feature-flags' } }, collections: [] },
+    config: { collections: [], custom: { payloadFeatureFlags: { collectionSlug: 'feature-flags' } } },
     find: async ({ where }: { where?: { name?: { equals?: unknown } } }) => ({
       docs: docs.filter((doc) => where?.name?.equals === undefined || doc.name === where.name.equals),
     }),

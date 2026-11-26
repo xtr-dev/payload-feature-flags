@@ -73,8 +73,8 @@ describe('feature flags plugin', () => {
     })
 
     const found = await payload.findByID({
-      collection: 'feature-flags',
       id: created.id,
+      collection: 'feature-flags',
     })
 
     expect(found.name).toBe(name)
@@ -85,7 +85,7 @@ describe('feature flags plugin', () => {
     expect(found.variants[0].name).toBe('control')
     expect(found.variants[0].weight).toBe(50)
 
-    await payload.delete({ collection: 'feature-flags', id: created.id })
+    await payload.delete({ id: created.id, collection: 'feature-flags' })
   })
 
   test('the unique constraint on name reaches the adapter', async () => {

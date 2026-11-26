@@ -1,4 +1,5 @@
 import type { Config } from 'payload'
+
 import { describe, expect, test } from 'vitest'
 
 import { payloadFeatureFlags } from '../src/index.js'

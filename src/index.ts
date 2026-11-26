@@ -1,20 +1,20 @@
-import type { Config, CollectionConfig, Field } from 'payload'
+import type { CollectionConfig, Config, Field } from 'payload'
 
+import { type FeatureFlagsCache, type NextCacheOptions, resolveCacheOption } from './cache.js'
 import { createPublicFlagsEndpoint } from './endpoints/publicFlags.js'
-import { resolveCacheOption, type FeatureFlagsCache, type NextCacheOptions } from './cache.js'
 
-export type CollectionOverrides = Partial<
-  Omit<CollectionConfig, 'fields'>
-> & {
+export type CollectionOverrides = {
   fields?: (args: { defaultFields: Field[] }) => Field[]
-}
+} & Partial<
+  Omit<CollectionConfig, 'fields'>
+>
 
+export { isUserInRolloutBucket, selectVariantForUser } from './bucketing.js'
+export { createNextCache, DEFAULT_CACHE_TAG } from './cache.js'
+export type { FeatureFlagsCache, NextCacheOptions } from './cache.js'
 // Export shared types for users of the plugin
 export type { PublicFeatureFlag, PublicFeatureFlagsResponse } from './endpoints/publicFlags.js'
-export { createNextCache, DEFAULT_CACHE_TAG } from './cache.js'
-export { isUserInRolloutBucket, selectVariantForUser } from './bucketing.js'
-export type { FeatureFlagsCache, NextCacheOptions } from './cache.js'
-export type { PayloadID, FeatureFlag } from './types/index.js'
+export type { FeatureFlag, PayloadID } from './types/index.js'
 
 /**
  * Key under `config.custom` where the plugin records its own settings for the
@@ -24,25 +24,45 @@ export type { PayloadID, FeatureFlag } from './types/index.js'
 export const FEATURE_FLAGS_CUSTOM_KEY = 'payloadFeatureFlags'
 
 export type FeatureFlagsCustomConfig = {
-  /** Slug of the collection the plugin created for feature flags. */
-  collectionSlug: string
-  /** Cross-request cache for the RSC helpers, set by the `cache` option. */
-  cache?: FeatureFlagsCache
   /** Other plugin settings stored under the same key (kept when merging). */
   [key: string]: unknown
+  /** Cross-request cache for the RSC helpers, set by the `cache` option. */
+  cache?: FeatureFlagsCache
+  /** Slug of the collection the plugin created for feature flags. */
+  collectionSlug: string
 }
 
 export type PayloadFeatureFlagsConfig = {
+  /**
+   * Cache the RSC helpers' lookups across requests. The plugin clears the
+   * cache from the collection's `afterChange` and `afterDelete` hooks.
+   * - `true`: Next.js `unstable_cache` tagged `payload-feature-flags`,
+   *   refreshed at least every 60 seconds.
+   * - `{ tag?, revalidate? }`: the same, with your own tag or time limit.
+   * - A `FeatureFlagsCache` object: your own cache (Redis, in-memory, ...).
+   * Off by default: without it every request reads the database.
+   * @default false
+   */
+  cache?: boolean | FeatureFlagsCache | NextCacheOptions
+  /**
+   * Override collection configuration
+   */
+  collectionOverrides?: CollectionOverrides
+  /**
+   * Default value for new feature flags
+   * @default false
+   */
+  defaultValue?: boolean
   /**
    * Enable/disable the plugin
    * @default false
    */
   disabled?: boolean
   /**
-   * Default value for new feature flags
+   * Enable custom list view for feature flags
    * @default false
    */
-  defaultValue?: boolean
+  enableCustomListView?: boolean
   /**
    * Enable percentage-based rollouts
    * @default true
@@ -54,15 +74,6 @@ export type PayloadFeatureFlagsConfig = {
    */
   enableVariants?: boolean
   /**
-   * Override collection configuration
-   */
-  collectionOverrides?: CollectionOverrides
-  /**
-   * Enable custom list view for feature flags
-   * @default false
-   */
-  enableCustomListView?: boolean
-  /**
    * Add a public `GET /api/<collection>/evaluate?names=a,b&userId=u` endpoint
    * that returns only `{ name, enabled }` (plus the variant and rollout result
    * for `userId`) for the named flags. The client hooks use it when called
@@ -71,31 +82,20 @@ export type PayloadFeatureFlagsConfig = {
    * @default false
    */
   publicEndpoint?: boolean
-  /**
-   * Cache the RSC helpers' lookups across requests. The plugin clears the
-   * cache from the collection's `afterChange` and `afterDelete` hooks.
-   * - `true`: Next.js `unstable_cache` tagged `payload-feature-flags`,
-   *   refreshed at least every 60 seconds.
-   * - `{ tag?, revalidate? }`: the same, with your own tag or time limit.
-   * - A `FeatureFlagsCache` object: your own cache (Redis, in-memory, ...).
-   * Off by default: without it every request reads the database.
-   * @default false
-   */
-  cache?: boolean | NextCacheOptions | FeatureFlagsCache
 }
 
 export const payloadFeatureFlags =
   (pluginOptions: PayloadFeatureFlagsConfig = {}) =>
   (config: Config): Config => {
     const {
-      disabled = false,
-      defaultValue = false,
-      enableRollouts = true,
-      enableVariants = true,
-      enableCustomListView = false,
-      publicEndpoint = false,
       cache: cacheOption,
       collectionOverrides,
+      defaultValue = false,
+      disabled = false,
+      enableCustomListView = false,
+      enableRollouts = true,
+      enableVariants = true,
+      publicEndpoint = false,
     } = pluginOptions
 
     const collectionSlug = collectionOverrides?.slug || 'feature-flags'
@@ -109,11 +109,11 @@ export const payloadFeatureFlags =
         {
           name: 'name',
           type: 'text',
-          required: true,
-          unique: true,
           admin: {
             description: 'Unique identifier for the feature flag',
           },
+          required: true,
+          unique: true,
         },
         {
           name: 'description',
@@ -125,48 +125,48 @@ export const payloadFeatureFlags =
         {
           name: 'enabled',
           type: 'checkbox',
-          defaultValue: defaultValue,
-          required: true,
           admin: {
             description: 'Toggle this feature flag on or off',
           },
+          defaultValue,
+          required: true,
         },
         ...(enableRollouts ? [{
             name: 'rolloutPercentage',
             type: 'number' as const,
-            min: 0,
-            max: 100,
-            defaultValue: 100,
             admin: {
-              description: 'Percentage of users who will see this feature (0-100)',
               condition: (data: any) => data?.enabled === true,
+              description: 'Percentage of users who will see this feature (0-100)',
             },
+            defaultValue: 100,
+            max: 100,
+            min: 0,
           }] : []),
         ...(enableVariants ? [{
             name: 'variants',
             type: 'array' as const,
             admin: {
-              description: 'Define variants for A/B testing',
               condition: (data: any) => data?.enabled === true,
+              description: 'Define variants for A/B testing',
             },
             fields: [
               {
                 name: 'name',
                 type: 'text' as const,
-                required: true,
                 admin: {
                   description: 'Variant identifier (e.g., control, variant-a)',
                 },
+                required: true,
               },
               {
                 name: 'weight',
                 type: 'number' as const,
-                min: 0,
-                max: 100,
-                required: true,
                 admin: {
                   description: 'Weight for this variant (all weights should sum to 100)',
                 },
+                max: 100,
+                min: 0,
+                required: true,
               },
               {
                 name: 'metadata',
@@ -180,15 +180,15 @@ export const payloadFeatureFlags =
         {
           name: 'tags',
           type: 'array' as const,
+          admin: {
+            description: 'Tags for organizing feature flags',
+          },
           fields: [
             {
               name: 'tag',
               type: 'text' as const,
             },
           ],
-          admin: {
-            description: 'Tags for organizing feature flags',
-          },
         },
         {
           name: 'metadata',
@@ -209,9 +209,9 @@ export const payloadFeatureFlags =
     // user's admin object (whether here or via otherOverrides below) replaces the
     // components key and silently discards enableCustomListView.
     const {
-      fields: _fieldsOverride,
       admin: adminOverride,
       endpoints: endpointsOverride,
+      fields: _fieldsOverride,
       ...otherOverrides
     } = collectionOverrides || {}
 
@@ -237,6 +237,7 @@ export const payloadFeatureFlags =
         // Other failures only mean the cache is not cleared until it
         // revalidates, which must not fail the flag change itself.
         if (error && typeof error === 'object' && typeof (error as { digest?: unknown }).digest === 'string') {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- rethrows Next.js control-flow objects unchanged, whatever their type
           throw error
         }
         console.error('Failed to clear the feature flags cache:', error)
@@ -254,9 +255,9 @@ export const payloadFeatureFlags =
     const featureFlagsCollection: CollectionConfig = {
       slug: collectionSlug,
       admin: {
-        useAsTitle: 'name',
-        group: 'Configuration',
         description: 'Manage feature flags for your application',
+        group: 'Configuration',
+        useAsTitle: 'name',
         ...(adminOverride || {}),
         components: enableCustomListView ? {
           ...adminOverride?.components,
@@ -268,8 +269,8 @@ export const payloadFeatureFlags =
           }
         } : adminOverride?.components || {},
       },
-      fields,
       endpoints,
+      fields,
       // Apply any other collection overrides
       ...otherOverrides,
       ...(hooks ? { hooks } : {}),
@@ -298,8 +299,8 @@ export const payloadFeatureFlags =
     if (cache) {
       const withCache: FeatureFlagsCustomConfig = {
         ...config.custom[FEATURE_FLAGS_CUSTOM_KEY],
-        collectionSlug,
         cache,
+        collectionSlug,
       }
       config.custom = {
         ...config.custom,
@@ -338,8 +339,8 @@ export const payloadFeatureFlags =
     // derive the same values from initPageResult instead. See FeatureFlagsOverviewView.tsx.
     config.admin.components.views['feature-flags-overview'] = {
       Component: {
-        path: '@xtr-dev/payload-feature-flags/views',
         exportName: 'FeatureFlagsOverviewView',
+        path: '@xtr-dev/payload-feature-flags/views',
         serverProps: { collectionSlug },
       },
       path: '/feature-flags-overview',

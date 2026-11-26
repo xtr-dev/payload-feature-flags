@@ -1,7 +1,10 @@
-import React from 'react'
 import type { SanitizedPermissions } from 'payload'
-import FeatureFlagsClient from './FeatureFlagsClient.js'
+
+import React from 'react'
+
 import type { FeatureFlag } from '../types/index.js'
+
+import FeatureFlagsClient from './FeatureFlagsClient.js'
 
 async function fetchInitialFlags(payload: any, collectionSlug: string): Promise<FeatureFlag[]> {
   try {
@@ -19,10 +22,10 @@ async function fetchInitialFlags(payload: any, collectionSlug: string): Promise<
 }
 
 export type RenderFeatureFlagsOverviewArgs = {
-  user: unknown
-  permissions: SanitizedPermissions | undefined
   collectionSlug: string
   payload: any
+  permissions: SanitizedPermissions | undefined
+  user: unknown
 }
 
 // Shared by the collection list view and the root admin view: the two entry
@@ -30,24 +33,24 @@ export type RenderFeatureFlagsOverviewArgs = {
 // shapes (see FeatureFlagsView.tsx and FeatureFlagsOverviewView.tsx), but once
 // those values are pulled out the access checks and markup are identical.
 export async function renderFeatureFlagsOverview({
-  user,
-  permissions,
   collectionSlug,
   payload,
+  permissions,
+  user,
 }: RenderFeatureFlagsOverviewArgs) {
   // Security check: User must be logged in
   if (!user) {
     return (
       <div style={{
-        padding: '2rem',
-        textAlign: 'center',
-        color: 'var(--theme-error-500)',
         backgroundColor: 'var(--theme-error-50)',
         border: '1px solid var(--theme-error-200)',
         borderRadius: '0.5rem',
-        margin: '2rem 0'
+        color: 'var(--theme-error-500)',
+        margin: '2rem 0',
+        padding: '2rem',
+        textAlign: 'center'
       }}>
-        <h2 style={{ marginBottom: '1rem', color: 'var(--theme-error-600)' }}>
+        <h2 style={{ color: 'var(--theme-error-600)', marginBottom: '1rem' }}>
           Authentication Required
         </h2>
         <p style={{ marginBottom: '1rem' }}>
@@ -56,13 +59,13 @@ export async function renderFeatureFlagsOverview({
         <a
           href="/admin/login"
           style={{
-            display: 'inline-block',
-            padding: '0.75rem 1.5rem',
             backgroundColor: 'var(--theme-error-500)',
-            color: 'white',
-            textDecoration: 'none',
             borderRadius: '0.375rem',
-            fontWeight: '500'
+            color: 'white',
+            display: 'inline-block',
+            fontWeight: '500',
+            padding: '0.75rem 1.5rem',
+            textDecoration: 'none'
           }}
         >
           Go to Login
@@ -76,21 +79,21 @@ export async function renderFeatureFlagsOverview({
   if (!canReadFeatureFlags) {
     return (
       <div style={{
-        padding: '2rem',
-        textAlign: 'center',
-        color: 'var(--theme-warning-600)',
         backgroundColor: 'var(--theme-warning-50)',
         border: '1px solid var(--theme-warning-200)',
         borderRadius: '0.5rem',
-        margin: '2rem 0'
+        color: 'var(--theme-warning-600)',
+        margin: '2rem 0',
+        padding: '2rem',
+        textAlign: 'center'
       }}>
-        <h2 style={{ marginBottom: '1rem', color: 'var(--theme-warning-700)' }}>
+        <h2 style={{ color: 'var(--theme-warning-700)', marginBottom: '1rem' }}>
           Access Denied
         </h2>
         <p style={{ marginBottom: '1rem' }}>
           You don't have permission to access the Feature Flags Dashboard.
         </p>
-        <p style={{ fontSize: '0.875rem', color: 'var(--theme-warning-600)' }}>
+        <p style={{ color: 'var(--theme-warning-600)', fontSize: '0.875rem' }}>
           Contact your administrator to request access to the {collectionSlug} collection.
         </p>
       </div>
@@ -105,10 +108,10 @@ export async function renderFeatureFlagsOverview({
 
   return (
     <FeatureFlagsClient
-      initialFlags={initialFlags}
       canUpdate={canUpdateFeatureFlags}
-      maxFlags={100}
       collectionSlug={collectionSlug}
+      initialFlags={initialFlags}
+      maxFlags={100}
     />
   )
 }

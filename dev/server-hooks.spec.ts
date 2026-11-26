@@ -12,21 +12,21 @@ const completeFlag = {
   name: 'new-homepage',
   description: 'Shows the redesigned homepage',
   enabled: true,
+  metadata: { owner: 'growth' },
   rolloutPercentage: 50,
+  tags: [{ tag: 'homepage' }, { tag: 'experiment' }],
   variants: [
     { name: 'control', weight: 50 },
     { name: 'variant-a', weight: 50 },
   ],
-  tags: [{ tag: 'homepage' }, { tag: 'experiment' }],
-  metadata: { owner: 'growth' },
 }
 
 const storedCompleteFlag = {
   ...completeFlag,
   id: 'flag-1',
   createdAt: '2026-08-23T00:00:00.000Z',
-  updatedAt: '2026-08-23T00:00:00.000Z',
   environment: 'production',
+  updatedAt: '2026-08-23T00:00:00.000Z',
 }
 
 const sparseFlag = {
@@ -35,37 +35,37 @@ const sparseFlag = {
 }
 
 const storedSparseFlag = {
+  id: 'flag-2',
   name: 'sparse-flag',
+  createdAt: '2026-08-23T00:00:00.000Z',
   description: null,
   enabled: true,
-  rolloutPercentage: null,
-  variants: null,
-  tags: null,
-  metadata: null,
-  id: 'flag-2',
-  createdAt: '2026-08-23T00:00:00.000Z',
-  updatedAt: '2026-08-23T00:00:00.000Z',
   environment: 'production',
+  metadata: null,
+  rolloutPercentage: null,
+  tags: null,
+  updatedAt: '2026-08-23T00:00:00.000Z',
+  variants: null,
 }
 
 const storedFlagWithNullableNestedFields = {
+  id: 'flag-3',
   name: 'nullable-nested',
+  createdAt: '2026-08-23T00:00:00.000Z',
   description: null,
   enabled: true,
-  rolloutPercentage: null,
-  variants: [{ name: 'control', weight: 100, metadata: null, id: 'v1' }],
-  tags: [
-    { tag: null, id: 't1' },
-    { tag: 'homepage', id: 't2' },
-  ],
-  metadata: null,
-  id: 'flag-3',
-  createdAt: '2026-08-23T00:00:00.000Z',
-  updatedAt: '2026-08-23T00:00:00.000Z',
   environment: 'production',
+  metadata: null,
+  rolloutPercentage: null,
+  tags: [
+    { id: 't1', tag: null },
+    { id: 't2', tag: 'homepage' },
+  ],
+  updatedAt: '2026-08-23T00:00:00.000Z',
+  variants: [{ id: 'v1', name: 'control', metadata: null, weight: 100 }],
 }
 
-const makePayload = (docs: Array<typeof completeFlag | Record<string, unknown>>): Payload =>
+const makePayload = (docs: Array<Record<string, unknown> | typeof completeFlag>): Payload =>
   ({
     config: {
       collections: [
@@ -150,8 +150,8 @@ describe('RSC feature flag mappers', () => {
     await expect(getFeatureFlag('nullable-nested', payload)).resolves.toEqual({
       name: 'nullable-nested',
       enabled: true,
-      variants: [{ name: 'control', weight: 100 }],
       tags: [{ tag: 'homepage' }],
+      variants: [{ name: 'control', weight: 100 }],
     })
   })
 })
