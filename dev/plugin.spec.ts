@@ -110,8 +110,11 @@ describe('host configuration', () => {
     expect(config.collections?.[0]).toBe(posts)
     expect(config.collections?.[1]?.slug).toBe('feature-flags')
     expect(config.admin?.components?.views?.host).toBe(hostView)
-    expect(config.admin?.components?.views?.['feature-flags-overview']).toEqual({
-      Component: '@xtr-dev/payload-feature-flags/views#FeatureFlagsView',
+    expect(config.admin?.components?.views?.['feature-flags-overview']).toMatchObject({
+      Component: {
+        path: '@xtr-dev/payload-feature-flags/views',
+        exportName: 'FeatureFlagsOverviewView',
+      },
       path: '/feature-flags-overview',
     })
     expect(config.endpoints).toHaveLength(1)
