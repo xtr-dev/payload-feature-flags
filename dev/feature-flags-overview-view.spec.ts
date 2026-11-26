@@ -132,3 +132,45 @@ describe('FeatureFlagsView (collection list view props)', () => {
     expect(JSON.stringify(element)).toContain('Authentication Required')
   })
 })
+
+// Payload 3.94 (Root/index.js) passes `user` on the props of every admin view,
+// root views included, but `collectionConfig` only on collection routes and
+// `permissions` only inside initPageResult. Rendering the list view there got
+// past the login check and crashed on `collectionConfig.slug` (a 500 page).
+describe('root admin view props as Payload 3.94 builds them', () => {
+  const payload394RootProps = {
+    user: { id: 'admin-1' },
+    initPageResult: {
+      req: { user: { id: 'admin-1' } },
+      permissions: { collections: { 'feature-flags': { read: true, update: true } } },
+    },
+    payload: mockPayload,
+  }
+
+  test('FeatureFlagsOverviewView renders the dashboard with the slug from serverProps', async () => {
+    const element: any = await FeatureFlagsOverviewView({
+      ...payload394RootProps,
+      collectionSlug: 'feature-flags',
+    } as unknown as AdminViewServerProps & { collectionSlug: string })
+
+    expect(typeof element.type).toBe('function')
+    expect(element.props.collectionSlug).toBe('feature-flags')
+    expect(element.props.canUpdate).toBe(true)
+  })
+
+  test('the plugin registers the root view as FeatureFlagsOverviewView with the collection slug', async () => {
+    const { payloadFeatureFlags } = await import('../src/index.js')
+    const config: any = await payloadFeatureFlags({ collectionOverrides: { slug: 'flags' } })({
+      collections: [],
+    } as any)
+
+    expect(config.admin.components.views['feature-flags-overview']).toEqual({
+      Component: {
+        path: '@xtr-dev/payload-feature-flags/views',
+        exportName: 'FeatureFlagsOverviewView',
+        serverProps: { collectionSlug: 'flags' },
+      },
+      path: '/feature-flags-overview',
+    })
+  })
+})
