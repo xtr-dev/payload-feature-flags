@@ -6,36 +6,24 @@ Feature flags plugin for Payload CMS v3. Manage feature toggles, A/B tests, and 
 
 ## Features
 
-- 🚀 **Easy setup** - Add to your Payload config and you're done
-- 🎛️ **Admin dashboard** - Manage flags from your Payload admin panel
-- 🔄 **Gradual rollouts** - Roll out features to a percentage of users
-- 🧪 **A/B testing** - Test different versions of features
-- 🛣️ **REST API** - Check flag status via API endpoints
-- 🗃️ **Quick demo** - Try it instantly with no database setup
+- A `feature-flags` collection with on/off state, percentage rollouts, weighted variants, tags and metadata
+- Helpers for React Server Components and React hooks for client components
+- Deterministic per-flag bucketing, identical on the server, in the public endpoint and in the client hooks
+- An admin dashboard at `/admin/feature-flags-overview`
+- Optional public evaluate endpoint, so the collection's `read` access can stay closed
+- Optional cross-request cache, cleared automatically when a flag changes
+
+## Requirements
+
+- `payload` and `@payloadcms/ui` ^3.56.0
+- `react` ^19.1.0
+- Node.js ^18.20.2 or >=20.9.0
 
 ## Installation
 
 ```bash
-npm install @xtr-dev/payload-feature-flags
-```
-
-```bash
-# or with pnpm
 pnpm add @xtr-dev/payload-feature-flags
-
-# or with yarn
-yarn add @xtr-dev/payload-feature-flags
 ```
-
-## Requirements
-
-- Payload CMS v3.56.0+
-- Node.js 18.20.2+ or 20.9.0+
-- React 19.1.0+
-
-## Quick Start
-
-### Basic Setup
 
 Add the plugin to your Payload config:
 
@@ -44,203 +32,136 @@ import { buildConfig } from 'payload'
 import { payloadFeatureFlags } from '@xtr-dev/payload-feature-flags'
 
 export default buildConfig({
-  // ... your existing config
-  plugins: [
-    payloadFeatureFlags({
-      // All options are optional - these are the defaults
-      defaultValue: false,       // New flags start disabled
-      enableRollouts: true,      // Allow percentage rollouts
-      enableVariants: true,      // Allow A/B testing
-      disabled: false,           // Plugin enabled
-    }),
-  ],
+  // ...
+  plugins: [payloadFeatureFlags()],
 })
 ```
 
-### Configuration Options
+Then regenerate the admin import map, since the plugin adds admin components:
 
-Available plugin options:
-
-```typescript
-export type PayloadFeatureFlagsConfig = {
-  /**
-   * Default value for new feature flags
-   * @default false
-   */
-  defaultValue?: boolean
-  
-  /**
-   * Enable percentage-based rollouts
-   * @default true
-   */
-  enableRollouts?: boolean
-  
-  /**
-   * Enable variant/experiment support (A/B testing)
-   * @default true
-   */
-  enableVariants?: boolean
-  
-  /**
-   * Disable the plugin while keeping the database schema intact
-   * @default false
-   */
-  disabled?: boolean
-  
-  /**
-   * Replace the feature flags collection's list view in the admin panel
-   * with the plugin's custom overview. Merges with any components set in
-   * collectionOverrides.admin.components.
-   * @default false
-   */
-  enableCustomListView?: boolean
-
-  /**
-   * Add a public GET /api/<collection>/evaluate endpoint that returns only
-   * { name, enabled } (plus variant and rollout for a userId) for named flags.
-   * Used by the client hooks with `source: 'public'`.
-   * @default false
-   */
-  publicEndpoint?: boolean
-
-  /**
-   * Cache the RSC helpers across requests, cleared automatically when a flag
-   * is changed or deleted. true = Next.js unstable_cache with the tag
-   * 'payload-feature-flags', refreshed at least every 60 seconds; { tag?, revalidate? } = the same with your own
-   * settings; or pass your own FeatureFlagsCache.
-   * @default false
-   */
-  cache?: boolean | NextCacheOptions | FeatureFlagsCache
-  
-  /**
-   * Override collection configuration
-   */
-  collectionOverrides?: {
-    // Override any collection config
-    slug?: string // @default 'feature-flags'
-    access?: CollectionConfig['access']
-    admin?: CollectionConfig['admin']
-    hooks?: CollectionConfig['hooks']
-    timestamps?: CollectionConfig['timestamps']
-    versions?: CollectionConfig['versions']
-    // ... any other collection config
-    
-    // Customize fields
-    fields?: (args: { defaultFields: Field[] }) => Field[]
-  }
-}
+```bash
+pnpm payload generate:importmap
 ```
 
-### Custom Fields and Access
+## Upgrading to 0.2.0
 
-Add custom fields or change permissions using `collectionOverrides`:
+0.2.0 changes how users are bucketed ([#54](https://github.com/xtr-dev/payload-feature-flags/pull/54)):
+
+- Rollouts and variants are bucketed per flag (a hash of the flag name and user ID). **Existing users get new buckets and new variants**, so running experiments restart with a fresh split. Finish an experiment, or roll its winner out to 100%, before upgrading if you need to keep assignments.
+- `rolloutPercentage: 0` now means nobody. Before, it let everyone in. Set it to 100, or clear it, if you relied on that.
+- If you copied hashing code from an earlier README, switch to `isUserInRolloutBucket` / `selectVariantForUser` (see [Bucketing](#bucketing)).
+
+The admin dashboard now points at the `FeatureFlagsOverviewView` export, so run `payload generate:importmap` after upgrading.
+
+## Options
+
+All options are optional.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `disabled` | `false` | Skip the `/admin/feature-flags-overview` view and the public endpoint. The collection is still added, so the database schema stays the same. |
+| `defaultValue` | `false` | Default of the `enabled` field for new flags. |
+| `enableRollouts` | `true` | Add the `rolloutPercentage` field. |
+| `enableVariants` | `true` | Add the `variants` field. |
+| `enableCustomListView` | `false` | Replace the collection's list view with the dashboard. Merges with `collectionOverrides.admin.components`. |
+| `publicEndpoint` | `false` | Add `GET /api/<collection>/evaluate`. See [Public endpoint](#public-endpoint). |
+| `cache` | `false` | Cache the RSC helpers across requests. See [Caching](#caching). |
+| `collectionOverrides` | | Any `CollectionConfig` property (`slug`, `access`, `admin`, `hooks`, `versions`, ...), plus `fields: ({ defaultFields }) => Field[]`. The slug defaults to `feature-flags`. |
 
 ```typescript
 payloadFeatureFlags({
   collectionOverrides: {
-    // Custom collection slug
     slug: 'my-feature-flags',
-    
-    // Custom access control
     access: {
-      read: ({ req: { user } }) => !!user, // authenticated users only
-      update: ({ req: { user } }) => user?.role === 'admin', // admins only
+      read: ({ req: { user } }) => !!user,
+      update: ({ req: { user } }) => user?.role === 'admin',
     },
-    
-    // Add custom fields
     fields: ({ defaultFields }) => [
       ...defaultFields,
-      {
-        name: 'environment',
-        type: 'select',
-        options: ['development', 'staging', 'production'],
-        required: true,
-      },
-      {
-        name: 'expiresAt',
-        type: 'date',
-        admin: {
-          description: 'Auto-disable this flag after this date',
-        },
-      },
+      { name: 'expiresAt', type: 'date' },
     ],
-    
-    // Add hooks
-    hooks: {
-      beforeChange: [
-        async ({ data, req }) => {
-          // Add audit log, validation, etc.
-          console.log(`Flag ${data.name} changed by ${req.user?.email}`)
-          return data
-        },
-      ],
-    },
   },
 })
 ```
 
-### Security Considerations
+The plugin records the collection slug in `config.custom.payloadFeatureFlags.collectionSlug`, which is where the server helpers read it from.
 
-**Collection Access Control:** The feature flags collection uses Payload's standard access control system:
+## Collection fields
 
-```typescript
-// Example: Secure collection access
-access: {
-  // Option 1: Simple authentication check
-  read: ({ req: { user } }) => !!user, // Only authenticated users
+- `name` (text, required, unique): the flag's identifier
+- `description` (textarea)
+- `enabled` (checkbox, required)
+- `rolloutPercentage` (number 0-100, default 100): share of users who get the flag. Empty means everyone, 0 means nobody.
+- `variants` (array of `name`, `weight`, `metadata`): weights are percentages. When they add up to less than 100, users in the remaining buckets get the first variant.
+- `tags` (array of `tag`)
+- `metadata` (JSON)
 
-  // Option 2: More granular control
-  read: ({ req: { user } }) => {
-    if (!user) return false                      // No anonymous access
-    if (user.role === 'admin') return true       // Admins see all flags
-    return { environment: { equals: 'public' } } // Others see public flags only
+`rolloutPercentage` and `variants` only show in the admin panel while the flag is enabled.
+
+## Server Components
+
+```tsx
+import { getPayload } from 'payload'
+import config from '@payload-config'
+import { isFeatureEnabled, getUserVariant } from '@xtr-dev/payload-feature-flags/rsc'
+
+export default async function ProductPage({ userId }: { userId: string }) {
+  const payload = await getPayload({ config })
+
+  if (!(await isFeatureEnabled('new-product-page', payload))) {
+    return <LegacyProductPage />
   }
+
+  const variant = await getUserVariant('product-layout-test', userId, payload)
+  return variant === 'layout-b' ? <LayoutB /> : <LayoutA />
 }
 ```
 
-**Production Security Best Practices:**
+All helpers take the `payload` instance as their last argument, and are wrapped in React `cache()`, so repeated calls in one request read the database once.
 
-For production environments, consider implementing these additional security measures:
+| Function | Returns |
+| --- | --- |
+| `getFeatureFlag(name, payload)` | The flag, or `null` |
+| `isFeatureEnabled(name, payload)` | `boolean` |
+| `getAllFeatureFlags(payload)` | Enabled flags keyed by name |
+| `isUserInRollout(name, userId, payload)` | `boolean`; `false` when the flag is disabled |
+| `getUserVariant(name, userId, payload)` | Variant name, or `null` when the flag is disabled or has no variants |
+| `getFeatureFlagsByTag(tag, payload)` | Flags with that tag |
 
-```typescript
-// Example: API key authentication for external services
-collectionOverrides: {
-  access: {
-    read: ({ req }) => {
-      // Check for API key in headers for service-to-service calls
-      const apiKey = req.headers['x-api-key']
-      if (apiKey && apiKey === process.env.FEATURE_FLAGS_API_KEY) {
-        return true
-      }
-      // Fall back to user authentication
-      return !!req.user
-    }
-  }
+A flag here has `name`, `enabled`, and optional `description`, `rolloutPercentage`, `variants`, `tags` and `metadata`. Lookups that fail log the error and return `null`, `{}` or `[]`.
+
+## Client components
+
+```tsx
+'use client'
+import { useFeatureFlag, useVariantSelection } from '@xtr-dev/payload-feature-flags/client'
+
+export function Banner({ userId }: { userId: string }) {
+  const { isEnabled, loading } = useFeatureFlag('new-banner')
+  const { variant } = useVariantSelection('banner-copy-test', userId)
+
+  if (loading || !isEnabled) return null
+  return <p>{variant === 'short' ? 'Hi!' : 'Welcome back, good to see you!'}</p>
 }
 ```
 
-**Rate Limiting:** Use Payload's built-in rate limiting or implement middleware:
+| Hook | Returns |
+| --- | --- |
+| `useFeatureFlags(initialFlags, options?)` | `{ flags, loading, error, refetch }` for the flags named in `initialFlags`, in the same order |
+| `useFeatureFlag(name, options?)` | `{ isEnabled, flag, loading, error }` |
+| `useSpecificFeatureFlag(name, options?)` | `{ flag, loading, error, refetch }` |
+| `useVariantSelection(name, userId, options?)` | `{ variant, flag, loading, error }` |
+| `useRolloutCheck(name, userId, options?)` | `{ isInRollout, flag, loading, error }` |
+| `withFeatureFlag(name, Fallback?, options?)(Component)` | A component that renders `Component` when the flag is on, else `Fallback` (or nothing) |
 
-```typescript
-// Example with express-rate-limit
-import rateLimit from 'express-rate-limit'
+`options` (`FeatureFlagOptions`): `serverURL` (defaults to the page's origin), `apiPath` (`/api`), `collectionSlug` (`feature-flags`), and `source`:
 
-const featureFlagLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-})
+- `'collection'` (default): reads Payload's REST API for the collection, so visitors need `read` access. `flag` holds the whole flag, including `description` and `tags`.
+- `'public'`: reads the [public endpoint](#public-endpoint). `flag` holds only `name` and `enabled`; variant and rollout are resolved on the server, and a missing flag shows as disabled instead of an error.
 
-// Apply to your API routes
-app.use('/api/feature-flags', featureFlagLimiter)
-```
+## Public endpoint
 
-**Important:** The plugin uses Payload's native REST API for the collection, which respects all access control rules.
-
-### Public Flags Endpoint (keep `read` closed)
-
-By default the client hooks read Payload's REST API for the collection, so visitors need `read` access to the whole collection, including disabled flags, metadata, variants and rollout settings. To keep `read` closed, turn on the public endpoint and call the hooks with `source: 'public'`:
+To keep the collection's `read` access closed, turn on `publicEndpoint` and call the hooks with `source: 'public'`:
 
 ```typescript
 payloadFeatureFlags({
@@ -256,262 +177,29 @@ const { isEnabled } = useFeatureFlag('new-homepage', { source: 'public' })
 const { variant } = useVariantSelection('checkout-test', userId, { source: 'public' })
 ```
 
-`GET /api/<collection>/evaluate?names=a,b&userId=u` returns `{ flags: { [name]: { name, enabled, variant?, inRollout? } } }` for every name you pass (at most 100). A name with no flag is answered as `enabled: false`, so the endpoint does not reveal which flags exist, and it never lists all flags. `variant` and `inRollout` are resolved on the server (same bucketing as the RSC helpers) and only included when `userId` is sent. With `source: 'public'` the hooks' `flag` holds only `name` and `enabled` (no description, tags, variants, rollout percentage or metadata), and a missing flag shows as disabled instead of an error.
+`GET /api/<collection>/evaluate?names=a,b&userId=u` returns `{ flags: { [name]: { name, enabled, variant?, inRollout? } } }` (types `PublicFeatureFlagsResponse` and `PublicFeatureFlag`). It answers every name you pass (at most 100), and a name with no flag gets `enabled: false`, so the response does not reveal which flags exist. It never lists all flags. `variant` and `inRollout` are only included when `userId` is sent.
 
-The endpoint is public by design: anyone can ask for the on/off state of a flag they can name, and the variant and rollout result for any `userId` they choose. Don't put anything in flag names, or base rollouts or variants on user IDs, that must stay secret. Only turn on `publicEndpoint` if that is acceptable.
+The endpoint is public by design: anyone can ask for the on/off state of a flag they can name, and for the variant and rollout result of any `userId`. Don't put secrets in flag names, and don't rely on users being unable to see other users' buckets.
 
-## Usage
+## Bucketing
 
-### Managing Feature Flags
-
-Once installed, the plugin automatically:
-
-1. **Creates a dedicated collection** - A `feature-flags` collection (or custom name) for managing all flags
-2. **Provides a clean admin interface** - Manage flags directly from the Payload admin panel  
-3. **Adds a custom dashboard view** - Enhanced UI for managing flags at `/admin/feature-flags-overview`
-4. **Exposes REST API endpoints** - Simple endpoints for checking flag states
-5. **Keeps your data clean** - No modifications to your existing collections
-6. **Records its collection slug** - Under `config.custom.payloadFeatureFlags.collectionSlug`, which the server helpers read to find the flags collection (configs without it fall back to detecting the collection by its fields)
-
-### Admin Interface
-
-The plugin provides a custom admin view with enhanced UI for managing feature flags:
-
-**📍 Access:** `/admin/feature-flags-overview`
-
-**Features:**
-- 📊 **Dashboard Overview** - Visual stats showing total, enabled, and rolling out flags
-- 🔍 **Search & Filter** - Find flags by name/description and filter by status
-- 🎛️ **Quick Toggle** - Enable/disable flags with visual toggle switches
-- 🏷️ **Smart Labels** - Visual indicators for rollout percentages, A/B tests, and environments
-- 📱 **Responsive Design** - Works seamlessly on desktop and mobile devices
-
-The custom view provides a more user-friendly interface compared to the standard collection view, with:
-- Real-time status indicators
-- One-click flag toggling
-- Better visual organization
-- Advanced filtering capabilities
-
-### Using Feature Flags in React Server Components
-
-The plugin provides server-side hooks for React Server Components:
-
-```tsx
-import { getPayload } from 'payload'
-import config from '@payload-config'
-import { 
-  isFeatureEnabled, 
-  getFeatureFlag,
-  isUserInRollout,
-  getUserVariant 
-} from '@xtr-dev/payload-feature-flags/rsc'
-
-// Simple feature check
-export default async function HomePage() {
-  const payload = await getPayload({ config })
-  const showNewDesign = await isFeatureEnabled('new-homepage-design', payload)
-  
-  return showNewDesign ? <NewHomePage /> : <LegacyHomePage />
-}
-
-// Percentage-based rollout
-export default async function Dashboard({ userId }: { userId: string }) {
-  const payload = await getPayload({ config })
-  const inRollout = await isUserInRollout('beta-dashboard', userId, payload)
-  
-  return inRollout ? <BetaDashboard /> : <ClassicDashboard />
-}
-
-// A/B testing with variants
-export default async function ProductPage({ userId }: { userId: string }) {
-  const payload = await getPayload({ config })
-  const variant = await getUserVariant('product-page-test', userId, payload)
-  
-  switch(variant) {
-    case 'layout-a':
-      return <ProductLayoutA />
-    case 'layout-b':
-      return <ProductLayoutB />
-    default:
-      return <DefaultProductLayout />
-  }
-}
-```
-
-### Using Feature Flags via REST API
-
-The plugin uses Payload's native REST API for the collection. You can access feature flags through the standard Payload REST endpoints:
-
-```typescript
-// Get all feature flags
-const response = await fetch('/api/feature-flags')
-const result = await response.json()
-// result.docs contains the array of feature flags
-
-// Query specific feature flags
-const response = await fetch('/api/feature-flags?where[name][equals]=new-dashboard')
-const result = await response.json()
-if (result.docs.length > 0 && result.docs[0].enabled) {
-  // Show new dashboard
-}
-
-// Get only enabled flags
-const response = await fetch('/api/feature-flags?where[enabled][equals]=true')
-const result = await response.json()
-```
-
-**Important Security Notes:**
-- **API endpoints respect your collection access controls** - they don't bypass security
-- Configure access permissions using `collectionOverrides.access` (see example above)
-- Anonymous users can only access flags if you explicitly allow it in access controls
-
-### API Endpoints
-
-The plugin uses Payload's standard REST API endpoints for the feature-flags collection:
-
-#### Get All Feature Flags
-
-```http
-GET /api/feature-flags
-```
-
-Returns paginated feature flags:
-
-```json
-{
-  "docs": [
-    {
-      "id": "...",
-      "name": "new-dashboard",
-      "enabled": true,
-      "rolloutPercentage": 50,
-      "variants": null,
-      "metadata": {},
-      "createdAt": "...",
-      "updatedAt": "..."
-    },
-    {
-      "id": "...",
-      "name": "beta-feature",
-      "enabled": true,
-      "rolloutPercentage": 100,
-      "variants": [
-        { "name": "control", "weight": 50, "metadata": {} },
-        { "name": "variant-a", "weight": 50, "metadata": {} }
-      ],
-      "metadata": {},
-      "createdAt": "...",
-      "updatedAt": "..."
-    }
-  ],
-  "totalDocs": 2,
-  "limit": 10,
-  "page": 1,
-  "totalPages": 1,
-  "pagingCounter": 1,
-  "hasPrevPage": false,
-  "hasNextPage": false
-}
-```
-
-#### Query Specific Feature Flag
-
-```http
-GET /api/feature-flags?where[name][equals]=new-dashboard
-```
-
-Returns matching feature flags:
-
-```json
-{
-  "docs": [
-    {
-      "id": "...",
-      "name": "new-dashboard",
-      "enabled": true,
-      "rolloutPercentage": 50,
-      "variants": null,
-      "metadata": {},
-      "createdAt": "...",
-      "updatedAt": "..."
-    }
-  ],
-  "totalDocs": 1,
-  "limit": 10,
-  "page": 1,
-  "totalPages": 1,
-  "pagingCounter": 1,
-  "hasPrevPage": false,
-  "hasNextPage": false
-}
-```
-
-### Feature Flag Schema
-
-The plugin creates a collection with the following fields:
-
-- **`name`** (required, unique) - Unique identifier for the feature flag
-- **`description`** - Description of what the flag controls
-- **`enabled`** (required) - Toggle the flag on/off
-- **`rolloutPercentage`** - Percentage of users (0-100) who see this feature
-- **`variants`** - Array of variants for A/B testing
-  - `name` - Variant identifier
-  - `weight` - Distribution weight (all weights should sum to 100)
-  - `metadata` - Additional variant data
-- **`tags`** - Array of tags for organization
-- **`metadata`** - JSON field for additional flag data
-
-## Advanced Usage
-
-### Conditional Feature Rendering
-
-```typescript
-// Example: Check feature flag from your frontend
-async function checkFeature(flagName: string): Promise<boolean> {
-  try {
-    const response = await fetch(`/api/feature-flags?where[name][equals]=${flagName}`)
-    if (!response.ok) return false
-    const result = await response.json()
-    return result.docs[0]?.enabled ?? false
-  } catch {
-    return false // Default to disabled on error
-  }
-}
-
-// Usage in your application
-if (await checkFeature('new-dashboard')) {
-  // Show new dashboard
-} else {
-  // Show legacy dashboard
-}
-```
-
-### Implementing Gradual Rollouts and A/B Tests
-
-Use the plugin's bucketing helpers (also exported from `@xtr-dev/payload-feature-flags/client`) so your own code puts users in the same buckets as the server helpers and hooks:
+`isUserInRolloutBucket(flagName, userId, rolloutPercentage)` and `selectVariantForUser(flagName, userId, variants)` are exported from the root and `/client` entry points. Use them to evaluate flags you fetched yourself, for example from the REST API, with the same result as the plugin:
 
 ```typescript
 import { isUserInRolloutBucket, selectVariantForUser } from '@xtr-dev/payload-feature-flags'
 
-const result = await fetch('/api/feature-flags?where[name][equals]=new-feature').then(r => r.json())
-const flag = result.docs[0]
+const { docs } = await fetch('/api/feature-flags?where[name][equals]=new-feature').then((r) => r.json())
+const flag = docs[0]
 
-// A missing rolloutPercentage means everyone; 0 means no one
-if (flag?.enabled && isUserInRolloutBucket(flag.name, userId, flag.rolloutPercentage)) {
-  // Show feature to this user
-}
-
-// Weighted pick from flag.variants; null when the flag has no variants
+const inRollout = flag?.enabled && isUserInRolloutBucket(flag.name, userId, flag.rolloutPercentage)
 const variant = flag?.enabled ? selectVariantForUser(flag.name, userId, flag.variants) : null
 ```
 
-Buckets are derived from a hash of the flag name and the user ID, so each flag splits users independently: being in one flag's 10% rollout says nothing about another flag's, and rollout and variant assignment of the same flag are independent too.
+Buckets come from a hash of the flag name and the user ID, so each flag splits users independently, and a flag's rollout and its variant assignment are independent of each other too.
 
-## Performance Considerations
+## Caching
 
-### Server-Side Caching Across Requests
-
-The RSC helpers use React `cache()`, which only dedupes calls within one request, so by default every request reads the database. Turn on the `cache` option to keep lookups between requests:
+The RSC helpers read the database on every request unless you turn on `cache`:
 
 ```typescript
 payloadFeatureFlags({
@@ -520,205 +208,44 @@ payloadFeatureFlags({
 })
 ```
 
-The plugin adds `afterChange` and `afterDelete` hooks to the flags collection (after any hooks from `collectionOverrides`) that clear the cache, so a changed flag shows on the next request. This also works outside a request inside the Next.js process (Payload jobs, `onInit`): the plugin then clears the tag on Next's global incremental cache. Next.js only creates that cache when it serves its first request, so a change made before then (for example in `onInit` at boot) cannot be cleared and only logs a warning; it shows up after `revalidate` runs out. Changes the hooks cannot reach stay cached until `revalidate` runs out, which is why it defaults to 60 seconds: direct database writes, and changes made from another process or server instance (the Payload CLI, a seed script, a second app instance with its own in-memory cache). Set `revalidate: false` only if every change goes through Payload in the same process, or call `revalidateTag('payload-feature-flags')` yourself. Outside a Next.js server the Next.js cache is skipped and lookups read the database.
+The plugin appends `afterChange` and `afterDelete` hooks to the collection (after your own) that clear the cache, so a changed flag shows on the next request. This also works outside a request inside the Next.js process, such as Payload jobs, except before Next.js has served its first request (for example in `onInit`), where it logs a warning.
 
-For another store (Redis, in-memory, ...) pass an object with `wrap(key, load)` and `invalidate()`; the `FeatureFlagsCache` type and `createNextCache()` are exported from the main entry point.
+Changes the hooks cannot see stay cached until `revalidate` runs out: direct database writes, and writes from another process or server instance (the Payload CLI, seed scripts, a second app instance). That's why `revalidate` defaults to 60 seconds. Use `revalidate: false` only if every change goes through Payload in the same process, or clear the tag yourself with `revalidateTag('payload-feature-flags', { expire: 0 })` (on Next.js 15, `revalidateTag('payload-feature-flags')`). Outside a Next.js server, lookups are not cached.
 
-### Client-Side Caching
+For another store (Redis, in-memory, ...) pass an object with `wrap(key, load)` and `invalidate()`. The `FeatureFlagsCache` type, `createNextCache()` and `DEFAULT_CACHE_TAG` are exported from the root entry point.
 
-For improved performance, consider implementing client-side caching when fetching feature flags:
+## Admin dashboard
 
-```typescript
-// Example: Simple cache with TTL
-class FeatureFlagCache {
-  private cache = new Map<string, { data: any; expiry: number }>()
-  private ttl = 5 * 60 * 1000 // 5 minutes
+`/admin/feature-flags-overview` lists every flag with search (name, description, tags), sorting, totals (enabled, disabled, rolling out, A/B tests), and inline toggles for `enabled` and `rolloutPercentage`. It needs a logged-in user with `read` access to the collection; editing needs `update` access. With `enableCustomListView: true` the same dashboard replaces the collection's list view.
 
-  async get(key: string, fetcher: () => Promise<any>) {
-    const cached = this.cache.get(key)
-    if (cached && cached.expiry > Date.now()) {
-      return cached.data
-    }
+The views are exported from `@xtr-dev/payload-feature-flags/views` (`FeatureFlagsView`, `FeatureFlagsOverviewView`).
 
-    const data = await fetcher()
-    this.cache.set(key, { data, expiry: Date.now() + this.ttl })
-    return data
-  }
-}
+## REST API
 
-const flagCache = new FeatureFlagCache()
-
-// Use with the hooks
-const flags = await flagCache.get('all-flags', () =>
-  fetch('/api/feature-flags?limit=1000').then(r => r.json())
-)
-```
-
-## Migration
-
-### Disabling the Plugin
-
-If you need to temporarily disable the plugin (e.g., during migrations), set `disabled: true` in the configuration. This keeps the database schema intact while disabling plugin functionality.
-
-```typescript
-payloadFeatureFlags({
-  disabled: true, // Plugin functionality disabled, schema preserved
-})
-```
-
-## Development
-
-### Try the Demo
-
-Test the plugin with zero setup:
+The collection is a normal Payload collection, so Payload's REST and GraphQL APIs work as usual and respect its access control:
 
 ```bash
-git clone https://github.com/xtr-dev/payload-feature-flags
-cd payload-feature-flags
-pnpm install
-pnpm dev
-# Visit http://localhost:3000
+curl 'http://localhost:3000/api/feature-flags?where[name][equals]=new-dashboard'
 ```
-
-**What you get:**
-- 🗃️ **No database server needed** - Uses SQLite at `file:./dev.db`
-- 🎯 **Sample data included** - Ready-to-test feature flag
-- 🔑 **Auto-login** - Use `dev@payloadcms.com / test`
-- 📱 **Working dashboard** - See flags in action
-
-### Building the Plugin
-
-```bash
-# Install dependencies
-pnpm install
-
-# Build the plugin
-pnpm build
-
-# Run tests
-pnpm test
-
-# Run linting
-pnpm lint
-```
-
-### Development Mode
-
-```bash
-# Start development server with hot reload
-pnpm dev
-
-# Generate types
-pnpm generate:types
-
-# Generate import map
-pnpm generate:importmap
-```
-
-## API Reference
-
-### Main Plugin Export
-
-```typescript
-import { payloadFeatureFlags } from '@xtr-dev/payload-feature-flags'
-```
-
-- `payloadFeatureFlags`: Main plugin configuration function
-- `PayloadFeatureFlagsConfig`: TypeScript type for configuration options
-
-### Client React API
-
-Import React hooks and the component-gating HOC from the `/client` entry point:
-
-```typescript
-import {
-  useFeatureFlags,
-  useFeatureFlag,
-  useSpecificFeatureFlag,
-  useVariantSelection,
-  useRolloutCheck,
-  withFeatureFlag,
-  type FeatureFlag,
-  type FeatureFlagOptions,
-} from '@xtr-dev/payload-feature-flags/client'
-```
-
-- `useFeatureFlags(initialFlags, options?)` - Fetch feature flags, returning `flags`, `loading`, `error`, and `refetch`.
-- `useFeatureFlag(flagName, options?)` - Check whether one flag is enabled, returning `isEnabled`, `flag`, `loading`, and `error`.
-- `useSpecificFeatureFlag(flagName, options?)` - Fetch one complete flag, returning `flag`, `loading`, `error`, and `refetch`.
-- `useVariantSelection(flagName, userId, options?)` - Select a stable variant for a user, returning `variant`, `flag`, `loading`, and `error`.
-- `useRolloutCheck(flagName, userId, options?)` - Check whether a user is in a flag's rollout, returning `isInRollout`, `flag`, `loading`, and `error`.
-- `withFeatureFlag(flagName, FallbackComponent?, options?)(WrappedComponent)` - Higher-order component that renders `WrappedComponent` when the flag is enabled, and `FallbackComponent` when it is not.
-- `FeatureFlag` - Type describing a flag's name, description, enabled state, rollout percentage, variants, tags, and metadata. With `source: 'public'` only `name` and `enabled` are filled in.
-- `FeatureFlagOptions` - Optional client configuration: `serverURL`, `apiPath`, `collectionSlug`, and `source` (`'collection'`, the default, or `'public'` to use the public flags endpoint).
-
-### Server Component Hooks (RSC Export)
-
-```typescript
-import { 
-  getFeatureFlag,
-  isFeatureEnabled,
-  getAllFeatureFlags,
-  isUserInRollout,
-  getUserVariant,
-  getFeatureFlagsByTag 
-} from '@xtr-dev/payload-feature-flags/rsc'
-```
-
-All of these take a `payload: Payload` instance as their final argument (obtained via `await getPayload({ config })` — see the RSC example above).
-
-#### Available Functions:
-
-- `getFeatureFlag(flagName: string, payload: Payload)` - Get complete flag data
-- `isFeatureEnabled(flagName: string, payload: Payload)` - Simple boolean check
-- `getAllFeatureFlags(payload: Payload)` - Get all active flags
-- `isUserInRollout(flagName: string, userId: string, payload: Payload)` - Check rollout percentage
-- `getUserVariant(flagName: string, userId: string, payload: Payload)` - Get A/B test variant
-- `getFeatureFlagsByTag(tag: string, payload: Payload)` - Get flags by tag
 
 ## Troubleshooting
 
-### Common Issues
+- **Dashboard or list view shows a missing component error:** run `payload generate:importmap`.
+- **Client hooks return nothing or an error:** the visitor needs `read` access to the collection, or use `publicEndpoint` with `source: 'public'`.
+- **A changed flag still shows its old value:** with `cache` on, a change from outside the app process shows after `revalidate` seconds. See [Caching](#caching).
 
-**Plugin not loading:**
-- Ensure Payload CMS v3.56.0+ is installed
-- Check that the plugin is properly added to the `plugins` array in your Payload config
+## Development
 
-**Feature flags not appearing:**
-- Check that the plugin is not disabled (`disabled: false`)
-- Check that `collectionOverrides.access` allows the current user to read the feature flags collection
+```bash
+pnpm install
+pnpm dev     # demo app at http://localhost:3000, SQLite, login dev@payloadcms.com / test
+pnpm test    # Vitest
+pnpm lint
+pnpm build
+```
 
-**TypeScript errors:**
-- Ensure all peer dependencies are installed
-- Run `pnpm generate:types` to regenerate type definitions
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+See [dev/README.md](./dev/README.md) for the demo app.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For issues, questions, or suggestions, please [open an issue](https://github.com/xtr-dev/payload-feature-flags/issues) on GitHub.
-
-## Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for a list of changes.
-
-## Authors
-
-- XTR Development Team
-
-## Acknowledgments
-
-- Built for [Payload CMS](https://payloadcms.com/)
-- Inspired by modern feature flag management systems
+MIT. See [CHANGELOG.md](./CHANGELOG.md) for changes, and [open an issue](https://github.com/xtr-dev/payload-feature-flags/issues) for bugs and questions.
