@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/xtr-dev/payload-feature-flags/compare/v0.1.0...v0.2.0) - 2026-11-26
+
+### Breaking
+- bucket rollouts and variants per flag and treat rolloutPercentage 0 as nobody ([#54](https://github.com/xtr-dev/payload-feature-flags/issues/54)) ([e74fbe5](https://github.com/xtr-dev/payload-feature-flags/commit/e74fbe548ab90a0012bcf5728df09203ff897a65))
+
+### Fixes
+- **views:** render /admin/feature-flags-overview as a root view (Payload 3.56 to 3.94) ([#40](https://github.com/xtr-dev/payload-feature-flags/issues/40)) ([3096620](https://github.com/xtr-dev/payload-feature-flags/commit/3096620ad9ecca1ed2ed16b1b73682951344b4db))
+- **cache:** pass an immediate-expiry profile to revalidateTag ([#55](https://github.com/xtr-dev/payload-feature-flags/issues/55)) ([418f163](https://github.com/xtr-dev/payload-feature-flags/commit/418f1638ee3d5fe958729a946d8109cfd62584af))
+
+### Other
+- **lint:** add @eslint/js so pnpm lint runs ([#56](https://github.com/xtr-dev/payload-feature-flags/issues/56)) ([bc18625](https://github.com/xtr-dev/payload-feature-flags/commit/bc1862515f7983e7b66ce380d032a9560bd52d52))
+
 ## [0.1.0] - 2026-11-25
 
 ### Fixes

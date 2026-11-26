@@ -3,6 +3,103 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.2.0",
+      "date": "2026-11-26",
+      "commit": "e74fbe5",
+      "breaking": true,
+      "groups": {
+        "breaking": [
+          {
+            "type": "fix",
+            "scope": null,
+            "description": "bucket rollouts and variants per flag and treat rolloutPercentage 0 as nobody (#54)",
+            "commit": "e74fbe5",
+            "hash": "e74fbe548ab90a0012bcf5728df09203ff897a65",
+            "author": "Bas",
+            "breaking": true,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ],
+        "fixes": [
+          {
+            "type": "fix",
+            "scope": null,
+            "description": "bucket rollouts and variants per flag and treat rolloutPercentage 0 as nobody (#54)",
+            "commit": "e74fbe5",
+            "hash": "e74fbe548ab90a0012bcf5728df09203ff897a65",
+            "author": "Bas",
+            "breaking": true,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "fix",
+            "scope": "views",
+            "description": "render /admin/feature-flags-overview as a root view (Payload 3.56 to 3.94) (#40)",
+            "commit": "3096620",
+            "hash": "3096620ad9ecca1ed2ed16b1b73682951344b4db",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "turbowombat.f038 <turbowombat.f038@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Sonnet 5 <noreply@anthropic.com>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "ninjamango.a697 <ninjamango.a697@agents.wandel.local>"
+              }
+            ]
+          },
+          {
+            "type": "fix",
+            "scope": "cache",
+            "description": "pass an immediate-expiry profile to revalidateTag (#55)",
+            "commit": "418f163",
+            "hash": "418f1638ee3d5fe958729a946d8109cfd62584af",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "type": "build",
+            "scope": "lint",
+            "description": "add @eslint/js so pnpm lint runs (#56)",
+            "commit": "bc18625",
+            "hash": "bc1862515f7983e7b66ce380d032a9560bd52d52",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "version": "0.1.0",
       "date": "2026-11-25",
       "commit": "b15670d",
