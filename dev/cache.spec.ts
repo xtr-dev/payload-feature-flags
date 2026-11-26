@@ -212,6 +212,19 @@ describe('createNextCache invalidation error handling', () => {
     vi.doUnmock('next/cache.js')
   })
 
+  test('passes an immediate-expiry profile to revalidateTag (Next.js 16 deprecates the one-argument form)', async () => {
+    const revalidateTag = vi.fn()
+    vi.resetModules()
+    vi.doMock('next/cache.js', () => ({ revalidateTag, unstable_cache: vi.fn() }))
+    const { createNextCache: createMockedNextCache } = await import('../src/cache.js')
+
+    await createMockedNextCache({ tag: 'my-flags' }).invalidate()
+
+    expect(revalidateTag).toHaveBeenCalledTimes(1)
+    expect(revalidateTag).toHaveBeenCalledWith('my-flags', { expire: 0 })
+    vi.doUnmock('next/cache.js')
+  })
+
   test("the plugin's hook rethrows Next.js control-flow errors and logs others", async () => {
     const dynamicError = Object.assign(new Error('Dynamic server usage'), { digest: 'DYNAMIC_SERVER_USAGE' })
     const invalidate = vi.fn<() => Promise<void>>()
