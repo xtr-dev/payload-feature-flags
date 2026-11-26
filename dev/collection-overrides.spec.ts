@@ -1,7 +1,7 @@
 import type { Config } from 'payload'
 import { describe, expect, test } from 'vitest'
 
-import { payloadFeatureFlags } from './index.js'
+import { payloadFeatureFlags } from '../src/index.js'
 
 describe('payloadFeatureFlags collectionOverrides pass-through', () => {
   test('uses the configured slug and passes access and hooks through unchanged', () => {
