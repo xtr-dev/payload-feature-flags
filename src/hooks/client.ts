@@ -1,6 +1,8 @@
 'use client'
 import React, { useCallback, useEffect, useState, useRef } from 'react'
 
+import { isUserInRolloutBucket, selectVariantForUser } from '../bucketing.js'
+
 export interface FeatureFlag {
   name: string
   enabled: boolean
@@ -339,7 +341,7 @@ export function useVariantSelection(
   const variant = options?.source === 'public'
     ? (state.variant ?? null)
     : flag?.enabled && flag.variants
-      ? selectVariantForUser(userId, flag.variants)
+      ? selectVariantForUser(flagName, userId, flag.variants)
       : null
 
   return { variant, flag, loading, error }
@@ -366,54 +368,10 @@ export function useRolloutCheck(
   const isInRollout = options?.source === 'public'
     ? (state.inRollout ?? false)
     : flag?.enabled
-      ? checkUserInRollout(userId, flag.rolloutPercentage || 100)
+      ? isUserInRolloutBucket(flagName, userId, flag.rolloutPercentage)
       : false
 
   return { isInRollout, flag, loading, error }
-}
-
-// Utility functions for client-side feature flag evaluation
-
-/**
- * Select variant for a user based on consistent hashing
- */
-function selectVariantForUser(
-  userId: string,
-  variants: Array<{ name: string; weight: number }>
-): string | null {
-  if (variants.length === 0) return null
-
-  // Simple hash function for consistent user bucketing
-  const hash = Math.abs(userId.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0)
-  }, 0))
-
-  const bucket = hash % 100
-  let cumulative = 0
-
-  for (const variant of variants) {
-    cumulative += variant.weight
-    if (bucket < cumulative) {
-      return variant.name
-    }
-  }
-
-  return variants[0]?.name || null
-}
-
-/**
- * Check if user is in rollout percentage
- */
-function checkUserInRollout(userId: string, percentage: number): boolean {
-  if (percentage >= 100) return true
-  if (percentage <= 0) return false
-
-  // Simple hash function for consistent user bucketing
-  const hash = userId.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0)
-  }, 0)
-
-  return (Math.abs(hash) % 100) < percentage
 }
 
 /**
