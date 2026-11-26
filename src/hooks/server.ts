@@ -1,71 +1,29 @@
 import { Payload } from 'payload'
 import { cache } from "react"
 
-export interface FeatureFlag {
-  name: string
-  description?: string
-  enabled: boolean
-  rolloutPercentage?: number
-  variants?: Array<{
-    name: string
-    weight: number
-    metadata?: any
-  }>
-  tags?: Array<{ tag: string }>
-  metadata?: any
-}
+import type { FeatureFlagsCache } from '../cache.js'
+import { FeatureFlag, toFeatureFlag } from '../utils/mappers.js'
 
-// Payload returns omitted optional fields as null; FeatureFlag advertises them as optional (`?:`).
-function nullToUndefined<T>(value: T | null | undefined): T | undefined {
-  return value ?? undefined
-}
+import { isUserInRolloutBucket, selectVariantForUser } from '../bucketing.js'
 
-function mapVariants(value: unknown): FeatureFlag['variants'] {
-  if (!Array.isArray(value)) {
-    return undefined
-  }
+// Must match FEATURE_FLAGS_CUSTOM_KEY in src/index.ts. Duplicated rather than
+// imported so the RSC entry point does not pull in the plugin config module.
+const FEATURE_FLAGS_CUSTOM_KEY = 'payloadFeatureFlags'
 
-  return value.map((entry) => {
-    const variant = (entry ?? {}) as Record<string, unknown>
-    return {
-      name: variant.name as string,
-      weight: variant.weight as number,
-      metadata: nullToUndefined(variant.metadata),
-    }
-  })
-}
-
-function mapTags(value: unknown): FeatureFlag['tags'] {
-  if (!Array.isArray(value)) {
-    return undefined
-  }
-
-  const tags: Array<{ tag: string }> = []
-  for (const entry of value) {
-    const tag = entry && typeof entry === 'object' ? (entry as Record<string, unknown>).tag : undefined
-    if (typeof tag === 'string') {
-      tags.push({ tag })
-    }
-  }
-  return tags
-}
-
-function toFeatureFlag(doc: Record<string, unknown>): FeatureFlag {
-  return {
-    name: doc.name as string,
-    description: nullToUndefined(doc.description as string | null | undefined),
-    enabled: doc.enabled as boolean,
-    rolloutPercentage: nullToUndefined(doc.rolloutPercentage as number | null | undefined),
-    variants: mapVariants(doc.variants),
-    tags: mapTags(doc.tags),
-    metadata: nullToUndefined(doc.metadata),
-  }
-}
-
-// Helper to get the collection slug from config
-function getCollectionSlug(payload: Payload): string {
+/**
+ * Resolve the feature flags collection slug. The plugin records the slug it
+ * created in `config.custom.payloadFeatureFlags.collectionSlug`; that value is
+ * used when present. Configs built by older plugin versions lack it, so the
+ * helper falls back to finding a collection with a unique text `name` field
+ * and a checkbox `enabled` field, and finally to `feature-flags`.
+ */
+export function getCollectionSlug(payload: Payload): string {
   try {
-    // Look for the feature flags collection - it should have a 'name' field with unique constraint
+    const configured = payload.config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]?.collectionSlug
+    if (typeof configured === 'string' && configured.length > 0) {
+      return configured
+    }
+
     const collection = payload.config.collections?.find(col =>
       col.fields.some((field: any) =>
         field.name === 'name' &&
@@ -80,6 +38,21 @@ function getCollectionSlug(payload: Payload): string {
   }
 }
 
+function getCrossRequestCache(payload: Payload): FeatureFlagsCache | undefined {
+  const configured = payload.config.custom?.[FEATURE_FLAGS_CUSTOM_KEY]?.cache
+  return configured && typeof configured.wrap === 'function' ? configured : undefined
+}
+
+/**
+ * Runs `load` through the plugin's cross-request cache when one is configured
+ * (the plugin's `cache` option), otherwise reads directly. The key starts with
+ * the collection slug so two flag collections never share entries.
+ */
+function withCrossRequestCache<T>(payload: Payload, key: string[], load: () => Promise<T>): Promise<T> {
+  const crossRequestCache = getCrossRequestCache(payload)
+  return crossRequestCache ? crossRequestCache.wrap(key, load) : load()
+}
+
 /**
  * Get a specific feature flag by name (for use in React Server Components)
  */
@@ -87,21 +60,23 @@ export const getFeatureFlag = cache(async (flagName: string, payload: Payload): 
   try {
     const collectionSlug = getCollectionSlug(payload)
 
-    const result = await payload.find({
-      collection: collectionSlug,
-      where: {
-        name: {
-          equals: flagName,
+    return await withCrossRequestCache(payload, [collectionSlug, 'flag', flagName], async () => {
+      const result = await payload.find({
+        collection: collectionSlug,
+        where: {
+          name: {
+            equals: flagName,
+          },
         },
-      },
-      limit: 1,
+        limit: 1,
+      })
+
+      if (result.docs.length === 0) {
+        return null
+      }
+
+      return toFeatureFlag(result.docs[0])
     })
-
-    if (result.docs.length === 0) {
-      return null
-    }
-
-    return toFeatureFlag(result.docs[0])
   } catch (error) {
     console.error(`Failed to fetch feature flag ${flagName}:`, error)
     return null
@@ -123,23 +98,25 @@ export const getAllFeatureFlags = cache(async (payload: Payload): Promise<Record
   try {
     const collectionSlug = getCollectionSlug(payload)
 
-    const result = await payload.find({
-      collection: collectionSlug,
-      where: {
-        enabled: {
-          equals: true,
+    return await withCrossRequestCache(payload, [collectionSlug, 'all'], async () => {
+      const result = await payload.find({
+        collection: collectionSlug,
+        where: {
+          enabled: {
+            equals: true,
+          },
         },
-      },
-      limit: 1000,
+        limit: 1000,
+      })
+
+      const flags: Record<string, FeatureFlag> = {}
+
+      for (const doc of result.docs) {
+        flags[doc.name as string] = toFeatureFlag(doc)
+      }
+
+      return flags
     })
-
-    const flags: Record<string, FeatureFlag> = {}
-
-    for (const doc of result.docs) {
-      flags[doc.name as string] = toFeatureFlag(doc)
-    }
-
-    return flags
   } catch (error) {
     console.error('Failed to fetch feature flags:', error)
     return {}
@@ -160,16 +137,7 @@ export const isUserInRollout = cache(async (
     return false
   }
 
-  if (!flag.rolloutPercentage || flag.rolloutPercentage === 100) {
-    return true
-  }
-
-  // Simple hash function for consistent user bucketing
-  const hash = userId.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0)
-  }, 0)
-
-  return (Math.abs(hash) % 100) < flag.rolloutPercentage
+  return isUserInRolloutBucket(flagName, userId, flag.rolloutPercentage)
 })
 
 /**
@@ -186,22 +154,7 @@ export const getUserVariant = cache(async (
     return null
   }
 
-  // Hash the user ID for consistent variant assignment
-  const hash = Math.abs(userId.split('').reduce((acc, char) => {
-    return ((acc << 5) - acc) + char.charCodeAt(0)
-  }, 0))
-
-  const bucket = hash % 100
-  let cumulative = 0
-
-  for (const variant of flag.variants) {
-    cumulative += variant.weight
-    if (bucket < cumulative) {
-      return variant.name
-    }
-  }
-
-  return flag.variants[0]?.name || null
+  return selectVariantForUser(flagName, userId, flag.variants)
 })
 
 /**
@@ -211,17 +164,19 @@ export const getFeatureFlagsByTag = cache(async (tag: string, payload: Payload):
   try {
     const collectionSlug = getCollectionSlug(payload)
 
-    const result = await payload.find({
-      collection: collectionSlug,
-      where: {
-        'tags.tag': {
-          equals: tag,
+    return await withCrossRequestCache(payload, [collectionSlug, 'tag', tag], async () => {
+      const result = await payload.find({
+        collection: collectionSlug,
+        where: {
+          'tags.tag': {
+            equals: tag,
+          },
         },
-      },
-      limit: 1000,
-    })
+        limit: 1000,
+      })
 
-    return result.docs.map(doc => toFeatureFlag(doc))
+      return result.docs.map(doc => toFeatureFlag(doc))
+    })
   } catch (error) {
     console.error(`Failed to fetch feature flags with tag ${tag}:`, error)
     return []
