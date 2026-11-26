@@ -9,6 +9,8 @@ import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { FeatureFlag, PayloadID } from '../types/index.js'
 
+import { isPartialRollout } from '../utils/rollout.js'
+
 // Simple debounce hook
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value)
@@ -510,7 +512,7 @@ const FeatureFlagsClientComponent = ({
                     }}>
                       <div style={{
                         backgroundColor: flag.enabled ?
-                          (flag.rolloutPercentage && flag.rolloutPercentage < 100 ? styles.warning : styles.primary)
+                          (isPartialRollout(flag.rolloutPercentage) ? styles.warning : styles.primary)
                           : styles.error,
                         borderRadius: '50%',
                         height: '8px',
@@ -585,7 +587,7 @@ const FeatureFlagsClientComponent = ({
                             width: '60px'
                           }}
                           type="number"
-                          value={flag.rolloutPercentage || 100}
+                          value={flag.rolloutPercentage ?? 100}
                         />
                         <span style={{ color: styles.textMuted }}>%</span>
                       </div>
@@ -658,7 +660,7 @@ const FeatureFlagsClientComponent = ({
           <span style={{ fontWeight: '600' }}>Disabled:</span> {flags.filter(f => f && !f.enabled).length}
         </div>
         <div>
-          <span style={{ fontWeight: '600' }}>Rolling out:</span> {flags.filter(f => f && f.enabled && f.rolloutPercentage && f.rolloutPercentage < 100).length}
+          <span style={{ fontWeight: '600' }}>Rolling out:</span> {flags.filter(f => f && f.enabled && isPartialRollout(f.rolloutPercentage)).length}
         </div>
         <div>
           <span style={{ fontWeight: '600' }}>A/B Tests:</span> {flags.filter(f => f && f.variants && f.variants.length > 0).length}
