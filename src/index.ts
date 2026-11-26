@@ -59,7 +59,6 @@ export type PayloadFeatureFlagsConfig = {
   collectionOverrides?: CollectionOverrides
   /**
    * Enable custom list view for feature flags
-   * Note: collectionOverrides.admin.components takes precedence when both are set.
    * @default false
    */
   enableCustomListView?: boolean
