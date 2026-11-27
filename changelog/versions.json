@@ -3,6 +3,80 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.3.0",
+      "date": "2026-11-27",
+      "commit": "0aa1444",
+      "breaking": true,
+      "groups": {
+        "breaking": [
+          {
+            "type": "fix",
+            "scope": "types",
+            "description": "make the root FeatureFlag type match what helpers return and add FeatureFlagDocument (#67)",
+            "commit": "ed3fd3d",
+            "hash": "ed3fd3da0e0acb62918cbc0dc7d46cb2749490f2",
+            "author": "Bas",
+            "breaking": true,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Fable 5.2 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ],
+        "fixes": [
+          {
+            "type": "fix",
+            "scope": "types",
+            "description": "make the root FeatureFlag type match what helpers return and add FeatureFlagDocument (#67)",
+            "commit": "ed3fd3d",
+            "hash": "ed3fd3da0e0acb62918cbc0dc7d46cb2749490f2",
+            "author": "Bas",
+            "breaking": true,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Fable 5.2 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "type": "deps",
+            "scope": null,
+            "description": "move the dev environment to Next 16.4 and Payload 3.94 (#68)",
+            "commit": "0aa1444",
+            "hash": "0aa1444b209f3304e6fe550671c34b5f0751094f",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Fable 5.2 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "docs",
+            "scope": null,
+            "description": "replace the pre-release warning with a short v0.x note (#66)",
+            "commit": "961f667",
+            "hash": "961f66739524c16b003c8d35106702061914d475",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Fable 5.2 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "version": "0.2.1",
       "date": "2026-11-27",
       "commit": "df51a07",

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0](https://github.com/xtr-dev/payload-feature-flags/compare/v0.2.1...v0.3.0) - 2026-11-27
+
+### Breaking
+- **types:** make the root FeatureFlag type match what helpers return and add FeatureFlagDocument ([#67](https://github.com/xtr-dev/payload-feature-flags/issues/67)) ([ed3fd3d](https://github.com/xtr-dev/payload-feature-flags/commit/ed3fd3da0e0acb62918cbc0dc7d46cb2749490f2))
+
+### Other
+- move the dev environment to Next 16.4 and Payload 3.94 ([#68](https://github.com/xtr-dev/payload-feature-flags/issues/68)) ([0aa1444](https://github.com/xtr-dev/payload-feature-flags/commit/0aa1444b209f3304e6fe550671c34b5f0751094f))
+- replace the pre-release warning with a short v0.x note ([#66](https://github.com/xtr-dev/payload-feature-flags/issues/66)) ([961f667](https://github.com/xtr-dev/payload-feature-flags/commit/961f66739524c16b003c8d35106702061914d475))
+
 ## [0.2.1](https://github.com/xtr-dev/payload-feature-flags/compare/v0.2.0...v0.2.1) - 2026-11-27
 
 ### Fixes
