@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.1](https://github.com/xtr-dev/payload-feature-flags/compare/v0.2.0...v0.2.1) - 2026-11-27
+
+### Fixes
+- **views:** show a 0% rollout as partial in the admin dashboard ([#65](https://github.com/xtr-dev/payload-feature-flags/issues/65)) ([df51a07](https://github.com/xtr-dev/payload-feature-flags/commit/df51a075b4fe0f4f3550c50b6c3cd8ea66883554))
+- **client:** return description and tags from client feature flag hooks ([#43](https://github.com/xtr-dev/payload-feature-flags/issues/43)) ([3bd6b62](https://github.com/xtr-dev/payload-feature-flags/commit/3bd6b6294a8fe760ddc82c62285b67c6b0e5b51b))
+
+### Other
+- audit README and docs for accuracy and brevity ([#64](https://github.com/xtr-dev/payload-feature-flags/issues/64)) ([377f7ab](https://github.com/xtr-dev/payload-feature-flags/commit/377f7ab515d73e35bc14a77cd319410c15d00ab8))
+- run checks on pull requests ([#63](https://github.com/xtr-dev/payload-feature-flags/issues/63)) ([c0b0007](https://github.com/xtr-dev/payload-feature-flags/commit/c0b00076acf17ed9752c2860ccc436e7d00469aa))
+- **lint:** lint TypeScript sources and fix the findings ([#62](https://github.com/xtr-dev/payload-feature-flags/issues/62)) ([4713b10](https://github.com/xtr-dev/payload-feature-flags/commit/4713b10dbc4c48b7fa11b9eca1b66ac27838a700))
+- bump Payload to 3.90, Next to 15.4.11 and refresh dev dependencies ([#59](https://github.com/xtr-dev/payload-feature-flags/issues/59)) ([208061c](https://github.com/xtr-dev/payload-feature-flags/commit/208061c39022760dd003dfafd736c95588303ca2))
+- remove unused devDependencies and the stale package-lock.json ([#58](https://github.com/xtr-dev/payload-feature-flags/issues/58)) ([67222d5](https://github.com/xtr-dev/payload-feature-flags/commit/67222d589c8dee715f8384eaf0241d76981fe04c))
+- require Payload 3.56, fix troubleshooting and versioning notes in README ([#28](https://github.com/xtr-dev/payload-feature-flags/issues/28)) ([7b06609](https://github.com/xtr-dev/payload-feature-flags/commit/7b06609f38107922f0d52d41803f22d581838800))
+- fix the collectionOverrides spec import after moving it to dev/ ([#57](https://github.com/xtr-dev/payload-feature-flags/issues/57)) ([99c58a1](https://github.com/xtr-dev/payload-feature-flags/commit/99c58a1fd7633b1d7d926dd58d67dab70acbebba))
+- cover collectionOverrides pass-through ([#39](https://github.com/xtr-dev/payload-feature-flags/issues/39)) ([cc43f81](https://github.com/xtr-dev/payload-feature-flags/commit/cc43f81eab37270ee2887242d53cb6013fa65f25))
+- check flag name is required and unique and enabled is required ([#38](https://github.com/xtr-dev/payload-feature-flags/issues/38)) ([d530ce6](https://github.com/xtr-dev/payload-feature-flags/commit/d530ce67b4cfad04ad5beb2e778f0152eb4029bd))
+- check the plugin preserves host collections, views and endpoints ([#37](https://github.com/xtr-dev/payload-feature-flags/issues/37)) ([48cb0b7](https://github.com/xtr-dev/payload-feature-flags/commit/48cb0b7fa4a6d44afbfcb3499faf845b7ea31037))
+
 ## [0.2.0](https://github.com/xtr-dev/payload-feature-flags/compare/v0.1.0...v0.2.0) - 2026-11-26
 
 ### Breaking

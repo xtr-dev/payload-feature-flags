@@ -3,6 +3,254 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.2.1",
+      "date": "2026-11-27",
+      "commit": "df51a07",
+      "breaking": false,
+      "groups": {
+        "fixes": [
+          {
+            "type": "fix",
+            "scope": "views",
+            "description": "show a 0% rollout as partial in the admin dashboard (#65)",
+            "commit": "df51a07",
+            "hash": "df51a075b4fe0f4f3550c50b6c3cd8ea66883554",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "fix",
+            "scope": "client",
+            "description": "return description and tags from client feature flag hooks (#43)",
+            "commit": "3bd6b62",
+            "hash": "3bd6b6294a8fe760ddc82c62285b67c6b0e5b51b",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "sleepymoth.77a8 <sleepymoth.77a8@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Haiku 4.5 <noreply@anthropic.com>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "saltymango.9d05 <saltymango.9d05@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "turbopotato808.d309 <turbopotato808.d309@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "angryraptor.6a3a <angryraptor.6a3a@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "frostyllama.fe98 <frostyllama.fe98@agents.wandel.local>"
+              }
+            ]
+          }
+        ],
+        "other": [
+          {
+            "type": "docs",
+            "scope": null,
+            "description": "audit README and docs for accuracy and brevity (#64)",
+            "commit": "377f7ab",
+            "hash": "377f7ab515d73e35bc14a77cd319410c15d00ab8",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "ci",
+            "scope": null,
+            "description": "run checks on pull requests (#63)",
+            "commit": "c0b0007",
+            "hash": "c0b00076acf17ed9752c2860ccc436e7d00469aa",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "build",
+            "scope": "lint",
+            "description": "lint TypeScript sources and fix the findings (#62)",
+            "commit": "4713b10",
+            "hash": "4713b10dbc4c48b7fa11b9eca1b66ac27838a700",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "deps",
+            "scope": null,
+            "description": "bump Payload to 3.90, Next to 15.4.11 and refresh dev dependencies (#59)",
+            "commit": "208061c",
+            "hash": "208061c39022760dd003dfafd736c95588303ca2",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "build",
+            "scope": null,
+            "description": "remove unused devDependencies and the stale package-lock.json (#58)",
+            "commit": "67222d5",
+            "hash": "67222d589c8dee715f8384eaf0241d76981fe04c",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "docs",
+            "scope": null,
+            "description": "require Payload 3.56, fix troubleshooting and versioning notes in README (#28)",
+            "commit": "7b06609",
+            "hash": "7b06609f38107922f0d52d41803f22d581838800",
+            "author": "XTR Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "grus.04d6 <grus.04d6@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "neptune.7b6f <neptune.7b6f@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "oberon.9841 <oberon.9841@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "mimas.732f <mimas.732f@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Bas <30904649+bvdaakster@users.noreply.github.com>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Bas van den Aakster <bvdaakster@gmail.com>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "test",
+            "scope": null,
+            "description": "fix the collectionOverrides spec import after moving it to dev/ (#57)",
+            "commit": "99c58a1",
+            "hash": "99c58a1fd7633b1d7d926dd58d67dab70acbebba",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "test",
+            "scope": null,
+            "description": "cover collectionOverrides pass-through (#39)",
+            "commit": "cc43f81",
+            "hash": "cc43f81eab37270ee2887242d53cb6013fa65f25",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "umbriel.45f3 <umbriel.45f3@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "alphard.299f <alphard.299f@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          },
+          {
+            "type": "test",
+            "scope": null,
+            "description": "check flag name is required and unique and enabled is required (#38)",
+            "commit": "d530ce6",
+            "hash": "d530ce67b4cfad04ad5beb2e778f0152eb4029bd",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "fluffygecko26.5ce0 <fluffygecko26.5ce0@agents.wandel.local>"
+              }
+            ]
+          },
+          {
+            "type": "test",
+            "scope": null,
+            "description": "check the plugin preserves host collections, views and endpoints (#37)",
+            "commit": "48cb0b7",
+            "hash": "48cb0b7fa4a6d44afbfcb3499faf845b7ea31037",
+            "author": "Bas",
+            "breaking": false,
+            "notes": [
+              {
+                "title": "Co-authored-by",
+                "text": "grumpyyeti123.9370 <grumpyyeti123.9370@agents.wandel.local>"
+              },
+              {
+                "title": "Co-authored-by",
+                "text": "Claude Opus 5.5 <noreply@anthropic.com>"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "version": "0.2.0",
       "date": "2026-11-26",
       "commit": "e74fbe5",
