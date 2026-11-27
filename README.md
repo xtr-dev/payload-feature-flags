@@ -43,6 +43,16 @@ Then regenerate the admin import map, since the plugin adds admin components:
 pnpm payload generate:importmap
 ```
 
+## Upgrading to 0.3.0
+
+0.3.0 corrects the `FeatureFlag` type exported from the root entry point. It used to describe a stored document (`id`, `createdAt`, `updatedAt`), but declared an `environment` field the plugin never adds and left out the `null` Payload returns for empty optional fields. Only types change; nothing behaves differently at runtime.
+
+- `FeatureFlag` from `@xtr-dev/payload-feature-flags` is now the type the helpers and hooks return, the same one `/rsc` and `/client` already exported. It has no `id`, `createdAt`, `updatedAt` or `environment`.
+- If you used the root `FeatureFlag` for documents read with `payload.find` or the REST API, switch to the new `FeatureFlagDocument`, and handle `null` for `description`, `rolloutPercentage`, `tags` and `variants` (for example `flag.rolloutPercentage ?? 100`).
+- For fields you added through `collectionOverrides.fields` (such as `environment`), use the `FeatureFlag` type from your own generated `payload-types.ts`.
+
+See [Types](#types).
+
 ## Upgrading to 0.2.0
 
 0.2.0 changes how users are bucketed ([#54](https://github.com/xtr-dev/payload-feature-flags/pull/54)):
@@ -128,7 +138,7 @@ All helpers take the `payload` instance as their last argument, and are wrapped 
 | `getUserVariant(name, userId, payload)` | Variant name, or `null` when the flag is disabled or has no variants |
 | `getFeatureFlagsByTag(tag, payload)` | Flags with that tag |
 
-A flag here has `name`, `enabled`, and optional `description`, `rolloutPercentage`, `variants`, `tags` and `metadata`. Lookups that fail log the error and return `null`, `{}` or `[]`.
+A flag here is a [`FeatureFlag`](#types): `name`, `enabled`, and optional `description`, `rolloutPercentage`, `variants`, `tags` and `metadata`. Lookups that fail log the error and return `null`, `{}` or `[]`.
 
 ## Client components
 
@@ -158,6 +168,27 @@ export function Banner({ userId }: { userId: string }) {
 
 - `'collection'` (default): reads Payload's REST API for the collection, so visitors need `read` access. `flag` holds the whole flag, including `description` and `tags`.
 - `'public'`: reads the [public endpoint](#public-endpoint). `flag` holds only `name` and `enabled`; variant and rollout are resolved on the server, and a missing flag shows as disabled instead of an error.
+
+## Types
+
+The root entry point exports two types for a flag:
+
+| Type | What it describes |
+| --- | --- |
+| `FeatureFlag` | What the [server helpers](#server-components) and [client hooks](#client-components) return: `name`, `enabled`, and optional `description`, `rolloutPercentage`, `variants`, `tags` and `metadata`. Empty optional fields are `undefined`, never `null`. Also exported from `/rsc` and `/client`. |
+| `FeatureFlagDocument` | A document as Payload stores and returns it (`payload.find`, the REST API, collection hooks): the fields above plus `id`, `createdAt` and `updatedAt`. Empty optional fields are `null`, and array rows carry an `id`. |
+
+```typescript
+import type { FeatureFlag, FeatureFlagDocument } from '@xtr-dev/payload-feature-flags'
+
+const flag: FeatureFlag | null = await getFeatureFlag('new-dashboard', payload)
+
+const { docs } = await payload.find({ collection: 'feature-flags' })
+const documents: FeatureFlagDocument[] = docs
+const percentage = documents[0].rolloutPercentage ?? 100 // null means no gradual rollout
+```
+
+Neither type includes fields added through `collectionOverrides.fields`. For those, use the `FeatureFlag` type in your generated `payload-types.ts`, which is assignable to `FeatureFlagDocument`.
 
 ## Public endpoint
 

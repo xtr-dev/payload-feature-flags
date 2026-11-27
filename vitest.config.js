@@ -23,6 +23,18 @@ export default defineConfig(() => {
       exclude: [...configDefaults.exclude, '**/e2e.spec.ts'],
       hookTimeout: 30_000,
       testTimeout: 30_000,
+      // Type-level tests (dev/*.test-d.ts) compare the exported types with the
+      // document type Payload generates in dev/payload-types.ts. That file
+      // narrows Payload's collection slugs for the whole program, which makes
+      // src (written against any config) report errors that do not exist for
+      // a consumer, so only errors inside the test files count here; src is
+      // type-checked on its own by `tsc --noEmit`.
+      typecheck: {
+        enabled: true,
+        ignoreSourceErrors: true,
+        include: ['dev/**/*.test-d.ts'],
+        tsconfig: './dev/tsconfig.json',
+      },
     },
   }
 })
