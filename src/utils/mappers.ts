@@ -1,18 +1,9 @@
-export interface FeatureFlag {
-  description?: string
-  enabled: boolean
-  metadata?: any
-  name: string
-  rolloutPercentage?: number
-  tags?: Array<{ tag: string }>
-  variants?: Array<{
-    metadata?: any
-    name: string
-    weight: number
-  }>
-}
+import type { FeatureFlag } from '../types/index.js'
 
-// Payload returns omitted optional fields as null; FeatureFlag advertises them as optional (`?:`).
+export type { FeatureFlag }
+
+// Payload returns omitted optional fields as null (see FeatureFlagDocument);
+// FeatureFlag advertises them as optional (`?:`) and never null.
 export function nullToUndefined<T>(value: null | T | undefined): T | undefined {
   return value ?? undefined
 }

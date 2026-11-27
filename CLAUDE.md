@@ -19,7 +19,7 @@ Guidance for AI agents working in this repository.
 
 Entry points (package.json `exports`), all built from `src/`:
 
-- `.` (`src/index.ts`): `payloadFeatureFlags(options)`, option types, `createNextCache`, `DEFAULT_CACHE_TAG`, `isUserInRolloutBucket`, `selectVariantForUser`, public endpoint types.
+- `.` (`src/index.ts`): `payloadFeatureFlags(options)`, option types, `createNextCache`, `DEFAULT_CACHE_TAG`, `isUserInRolloutBucket`, `selectVariantForUser`, the `FeatureFlag` / `FeatureFlagDocument` types, public endpoint types.
 - `./rsc` (`src/exports/rsc.ts` → `src/hooks/server.ts`): `getFeatureFlag`, `isFeatureEnabled`, `getAllFeatureFlags`, `isUserInRollout`, `getUserVariant`, `getFeatureFlagsByTag`. Wrapped in React `cache()`; use the cross-request cache when configured.
 - `./client` (`src/exports/client.ts` → `src/hooks/client.ts`): React hooks and `withFeatureFlag`, plus the bucketing helpers.
 - `./views` (`src/exports/views.ts`): `FeatureFlagsView` (collection list view, `enableCustomListView`) and `FeatureFlagsOverviewView` (root view at `/admin/feature-flags-overview`). Both render `src/views/renderFeatureFlagsOverview.tsx`; they get different props (`ListViewServerProps` vs `AdminViewServerProps` + `serverProps.collectionSlug`).
@@ -29,7 +29,8 @@ Other modules:
 - `src/bucketing.ts`: per-flag deterministic hashing shared by the RSC helpers, the endpoint and the client hooks. Keep them in sync through this module only. `rolloutPercentage` null/undefined means everyone, 0 means nobody.
 - `src/endpoints/publicFlags.ts`: `GET /api/<collection>/evaluate?names=..&userId=..` (`publicEndpoint`). Reads with `overrideAccess`, returns only name/enabled (+ variant/inRollout), answers unknown names as disabled.
 - `src/cache.ts`: `FeatureFlagsCache` interface and the Next.js `unstable_cache` implementation; invalidated from the collection's `afterChange`/`afterDelete` hooks via `revalidateTag(tag, { expire: 0 })`.
-- `src/utils/mappers.ts`: `toFeatureFlag`, shared by client and server.
+- `src/types/index.ts`: `FeatureFlag` (what helpers and hooks return, no nulls, no id/timestamps) and `FeatureFlagDocument` (the stored document, nullable optional fields). `dev/types.test-d.ts` checks both against `dev/payload-types.ts`; it runs with `pnpm test` (Vitest typecheck).
+- `src/utils/mappers.ts`: `toFeatureFlag` turns a document into a `FeatureFlag`, shared by client and server.
 - The plugin stores its settings under `config.custom.payloadFeatureFlags` (`collectionSlug`, `cache`); the server helpers read them from there. With `disabled: true` the collection is still added (schema stays stable) but the root view and endpoint are not.
 
 Tests live in `dev/` next to the demo app (`dev/payload.config.ts`, SQLite).

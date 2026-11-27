@@ -14,7 +14,7 @@ export { createNextCache, DEFAULT_CACHE_TAG } from './cache.js'
 export type { FeatureFlagsCache, NextCacheOptions } from './cache.js'
 // Export shared types for users of the plugin
 export type { PublicFeatureFlag, PublicFeatureFlagsResponse } from './endpoints/publicFlags.js'
-export type { FeatureFlag, PayloadID } from './types/index.js'
+export type { FeatureFlag, FeatureFlagDocument, PayloadID } from './types/index.js'
 
 /**
  * Key under `config.custom` where the plugin records its own settings for the
