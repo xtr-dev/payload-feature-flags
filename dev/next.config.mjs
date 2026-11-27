@@ -7,6 +7,9 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Next 16's dev server writes an AGENTS.md into the app directory unless
+  // this is off; the repo keeps its agent notes in the root CLAUDE.md.
+  agentRules: false,
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
       '.cjs': ['.cts', '.cjs'],

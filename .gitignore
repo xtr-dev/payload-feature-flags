@@ -14,6 +14,9 @@
 
 # next.js
 .next/
+# Rewritten by every `next dev` and `next build` (Next 16 points it at
+# generated route types under .next/), so it cannot stay committed.
+next-env.d.ts
 /out/
 
 # production
