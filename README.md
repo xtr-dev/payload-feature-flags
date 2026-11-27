@@ -2,7 +2,7 @@
 
 Feature flags plugin for Payload CMS v3. Manage feature toggles, A/B tests, and rollouts from your admin panel.
 
-⚠️ **Pre-release Warning**: This package is currently in active development (v0.0.x). Breaking changes may occur before v1.0.0. Not recommended for production use.
+**v0.x** — minor versions may contain breaking changes until 1.0.
 
 ## Features
 
