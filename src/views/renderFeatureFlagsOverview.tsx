@@ -2,11 +2,11 @@ import type { SanitizedPermissions } from 'payload'
 
 import React from 'react'
 
-import type { FeatureFlag } from '../types/index.js'
+import type { FeatureFlagDocument } from '../types/index.js'
 
 import FeatureFlagsClient from './FeatureFlagsClient.js'
 
-async function fetchInitialFlags(payload: any, collectionSlug: string): Promise<FeatureFlag[]> {
+async function fetchInitialFlags(payload: any, collectionSlug: string): Promise<FeatureFlagDocument[]> {
   try {
     const result = await payload.find({
       collection: collectionSlug,

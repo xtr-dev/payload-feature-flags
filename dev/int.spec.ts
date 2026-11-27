@@ -4,6 +4,10 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
+import type { FeatureFlagDocument } from '../src/index.js'
+
+import { getFeatureFlag } from '../src/hooks/server.js'
+
 let payload: Payload
 
 beforeAll(async () => {
@@ -86,6 +90,49 @@ describe('feature flags plugin', () => {
     expect(found.variants[0].weight).toBe(50)
 
     await payload.delete({ id: created.id, collection: 'feature-flags' })
+  })
+
+  test('optional fields left empty are stored as null and reach the helpers as undefined', async () => {
+    const name = `int-sparse-${Date.now()}`
+
+    const created = await payload.create({
+      collection: 'feature-flags',
+      // rolloutPercentage has a default of 100, so it is cleared explicitly
+      data: { name, enabled: true, environment: 'staging', rolloutPercentage: null },
+    })
+
+    try {
+      // FeatureFlagDocument is the declared shape of what Payload returns here:
+      // the optional scalar fields come back as null, not as missing keys.
+      const stored: FeatureFlagDocument = await payload.findByID({
+        id: created.id,
+        collection: 'feature-flags',
+      })
+
+      expect(stored.id).toBe(created.id)
+      expect(typeof stored.createdAt).toBe('string')
+      expect(typeof stored.updatedAt).toBe('string')
+      expect(stored.description).toBeNull()
+      expect(stored.rolloutPercentage).toBeNull()
+      expect(stored.metadata).toBeNull()
+      expect(stored.variants ?? []).toEqual([])
+      expect(stored.tags ?? []).toEqual([])
+
+      // FeatureFlag, the helpers' return type, never holds null and has no
+      // document-only fields.
+      const flag = await getFeatureFlag(name, payload)
+      expect(flag).not.toBeNull()
+      expect(flag).toMatchObject({ name, enabled: true })
+      expect(flag?.description).toBeUndefined()
+      expect(flag?.rolloutPercentage).toBeUndefined()
+      expect(flag?.metadata).toBeUndefined()
+      expect(Object.values(flag ?? {})).not.toContain(null)
+      expect(flag).not.toHaveProperty('id')
+      expect(flag).not.toHaveProperty('createdAt')
+      expect(flag).not.toHaveProperty('updatedAt')
+    } finally {
+      await payload.delete({ id: created.id, collection: 'feature-flags' })
+    }
   })
 
   test('the unique constraint on name reaches the adapter', async () => {

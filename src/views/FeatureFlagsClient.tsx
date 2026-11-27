@@ -7,7 +7,7 @@ import {
 } from '@payloadcms/ui'
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { FeatureFlag, PayloadID } from '../types/index.js'
+import type { FeatureFlagDocument, PayloadID } from '../types/index.js'
 
 import { isPartialRollout } from '../utils/rollout.js'
 
@@ -31,7 +31,7 @@ function useDebounce<T>(value: T, delay: number): T {
 interface FeatureFlagsClientProps {
   canUpdate?: boolean
   collectionSlug?: string // Configurable collection slug for URLs
-  initialFlags?: FeatureFlag[]
+  initialFlags?: FeatureFlagDocument[]
   maxFlags?: number // Configurable limit for API requests
 }
 
@@ -53,7 +53,7 @@ const FeatureFlagsClientComponent = ({
 }: FeatureFlagsClientProps) => {
   const { config } = useConfig()
   const { theme } = useTheme()
-  const [flags, setFlags] = useState<FeatureFlag[]>(initialFlags)
+  const [flags, setFlags] = useState<FeatureFlagDocument[]>(initialFlags)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -88,7 +88,7 @@ const FeatureFlagsClientComponent = ({
 
       // Only update state if the component is still mounted (signal not aborted)
       if (!signal?.aborted) {
-        setFlags(flagsArray as FeatureFlag[])
+        setFlags(flagsArray as FeatureFlagDocument[])
       }
     } catch (err) {
       // Don't show error if request was aborted (component unmounting)
@@ -120,7 +120,7 @@ const FeatureFlagsClientComponent = ({
     }
   }, [fetchFlags]) // Re-fetch if fetchFlags function changes
 
-  const updateFlag = useCallback(async (flagId: PayloadID, updates: Partial<FeatureFlag>) => {
+  const updateFlag = useCallback(async (flagId: PayloadID, updates: Partial<FeatureFlagDocument>) => {
     // Security check: Don't allow updates if user doesn't have permission
     if (!canUpdate) {
       setError('You do not have permission to update feature flags')
