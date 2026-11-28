@@ -219,6 +219,16 @@ export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || 'dev-secret-key-change-in-production',
   sharp,
   typescript: {
+    // Types are regenerated on demand with `pnpm generate:types`, so the dev
+    // server does not spawn a generator process on every config change.
+    autoGenerate: false,
+    // Leave out the `declare module 'payload'` block. It would narrow Payload's
+    // collection slugs and document types to this app for every file in the
+    // program, and the dev app compiles the plugin source directly: that
+    // source is written against any config, so it would stop type-checking.
+    // Code that wants this app's document types imports them from
+    // payload-types.ts instead.
+    declare: false,
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
 })

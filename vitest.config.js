@@ -24,11 +24,10 @@ export default defineConfig(() => {
       hookTimeout: 30_000,
       testTimeout: 30_000,
       // Type-level tests (dev/*.test-d.ts) compare the exported types with the
-      // document type Payload generates in dev/payload-types.ts. That file
-      // narrows Payload's collection slugs for the whole program, which makes
-      // src (written against any config) report errors that do not exist for
-      // a consumer, so only errors inside the test files count here; src is
-      // type-checked on its own by `tsc --noEmit`.
+      // document type Payload generates in dev/payload-types.ts. Only errors
+      // inside the test files count here: the program in dev/tsconfig.json
+      // also holds the demo app and, after a build, Next's generated route
+      // types, and those are type-checked by `pnpm dev:build` instead.
       typecheck: {
         enabled: true,
         ignoreSourceErrors: true,

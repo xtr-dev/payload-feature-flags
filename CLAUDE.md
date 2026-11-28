@@ -12,7 +12,8 @@ Guidance for AI agents working in this repository.
 - `pnpm test`: Vitest suite (`dev/*.spec.ts`). `pnpm test:e2e` runs Playwright separately.
 - `pnpm lint` / `pnpm lint:fix`: ESLint (`@payloadcms/eslint-config`, type-aware)
 - `pnpm build`: copy assets, emit types with `tsc`, compile with SWC into `dist/`
-- `npx tsc --noEmit`: type check
+- `npx tsc --noEmit`: type check of `src`
+- `pnpm dev:build`: production build of the demo app, which also type-checks `dev/` (needs no `dist/`: `dev/tsconfig.json` maps the package name to `src`)
 - `pnpm generate:types` / `pnpm generate:importmap`: regenerate `dev/payload-types.ts` and the dev admin import map. Run `generate:importmap` after changing admin component paths.
 
 ## Architecture
@@ -33,11 +34,11 @@ Other modules:
 - `src/utils/mappers.ts`: `toFeatureFlag` turns a document into a `FeatureFlag`, shared by client and server.
 - The plugin stores its settings under `config.custom.payloadFeatureFlags` (`collectionSlug`, `cache`); the server helpers read them from there. With `disabled: true` the collection is still added (schema stays stable) but the root view and endpoint are not.
 
-Tests live in `dev/` next to the demo app (`dev/payload.config.ts`, SQLite).
+Tests live in `dev/` next to the demo app (`dev/payload.config.ts`, SQLite). The dev config sets `typescript.declare: false`, so `dev/payload-types.ts` does not augment Payload's types: the Local API is untyped there, and code that needs the app's document types imports them from that file.
 
 ## Conventions
 
 - PR titles use conventional commits (`feat:`, `fix:`, `docs:`, `deps:`, `ci:`, ...); a `!` or a `BREAKING CHANGE` footer marks breaking changes.
 - Never bump `package.json` versions or edit `CHANGELOG.md` in PRs.
-- CI (`.github/workflows/ci.yml`) runs `pnpm test`, `pnpm lint`, `tsc --noEmit` and `pnpm build` on every PR.
+- CI (`.github/workflows/ci.yml`) runs `pnpm test`, `pnpm lint`, `tsc --noEmit`, `pnpm build` and `pnpm dev:build` on every PR.
 - Releases are manual: Actions → Release → Run workflow (`.github/workflows/release.yml`, the shared xtr-dev workflow using xtr-dev/changelog). It derives the version and changelog from commits since the last tag and runs `pnpm test` and `pnpm lint` first.
