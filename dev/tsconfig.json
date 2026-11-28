@@ -30,6 +30,18 @@
       ],
       "payload-feature-flags/views": [
         "../src/exports/views.ts"
+      ],
+      "@xtr-dev/payload-feature-flags": [
+        "../src/index.ts"
+      ],
+      "@xtr-dev/payload-feature-flags/client": [
+        "../src/exports/client.ts"
+      ],
+      "@xtr-dev/payload-feature-flags/rsc": [
+        "../src/exports/rsc.ts"
+      ],
+      "@xtr-dev/payload-feature-flags/views": [
+        "../src/exports/views.ts"
       ]
     },
     "noEmit": true,

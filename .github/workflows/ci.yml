@@ -28,3 +28,6 @@ jobs:
       - run: pnpm lint
       - run: npx tsc --noEmit
       - run: pnpm build
+      # The demo app is the only place dev/ is type-checked and where Next.js
+      # compiles the plugin source, so build it to keep the playground working.
+      - run: pnpm dev:build

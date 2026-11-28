@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 import type { FeatureFlagDocument } from '../src/index.js'
+import type { FeatureFlag as GeneratedFeatureFlag } from './payload-types.js'
 
 import { getFeatureFlag } from '../src/hooks/server.js'
 
@@ -104,10 +105,15 @@ describe('feature flags plugin', () => {
     try {
       // FeatureFlagDocument is the declared shape of what Payload returns here:
       // the optional scalar fields come back as null, not as missing keys.
-      const stored: FeatureFlagDocument = await payload.findByID({
+      // The Local API is not typed against this app's collections (the dev
+      // config turns off the `declare module 'payload'` block), so the result
+      // is first given the generated document type, which must then be
+      // assignable to FeatureFlagDocument.
+      const found = (await payload.findByID({
         id: created.id,
         collection: 'feature-flags',
-      })
+      })) as GeneratedFeatureFlag
+      const stored: FeatureFlagDocument = found
 
       expect(stored.id).toBe(created.id)
       expect(typeof stored.createdAt).toBe('string')

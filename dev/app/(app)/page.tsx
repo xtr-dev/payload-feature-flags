@@ -2,6 +2,11 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 import { getAllFeatureFlags, isFeatureEnabled } from 'payload-feature-flags/rsc'
 
+// The page shows the flags' current state, so it is rendered on every request.
+// Prerendering it would also make `next build` query the database, which has
+// no tables yet in a fresh checkout (the schema is only pushed in dev mode).
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage() {
   const payload = await getPayload({ config })
   

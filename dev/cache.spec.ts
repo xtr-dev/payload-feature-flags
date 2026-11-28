@@ -15,7 +15,9 @@ const makeMemoryCache = () => {
     invalidate: vi.fn(() => {
       store.clear()
     }),
-    wrap: vi.fn(async <T>(key: string[], load: () => Promise<T>): Promise<T> => {
+    // A plain function, not vi.fn(): a mock's type drops the generic
+    // parameter, so it would no longer satisfy FeatureFlagsCache['wrap'].
+    wrap: async <T>(key: string[], load: () => Promise<T>): Promise<T> => {
       const id = JSON.stringify(key)
       if (store.has(id)) {
         return store.get(id) as T
@@ -23,7 +25,7 @@ const makeMemoryCache = () => {
       const value = await load()
       store.set(id, value)
       return value
-    }),
+    },
   }
   return { cache, store }
 }
